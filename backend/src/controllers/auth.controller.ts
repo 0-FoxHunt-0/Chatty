@@ -48,9 +48,6 @@ export const signup = async (req: Request, res: Response) => {
       //* Generate token
       generateToken((user as IUser & { _id: string })._id.toString(), res);
 
-      //* Save user
-      await user.save();
-
       //* Send success response
       res.status(201).json({
         success: true,
@@ -150,29 +147,12 @@ export const logout = (req: Request, res: Response) => {
 
 export const updateProfile = async (req: Request, res: Response) => {
   try {
-    // Debug logging
-    console.log("=== UPDATE PROFILE DEBUG ===");
-    console.log("Request method:", req.method);
-    console.log("Request URL:", req.url);
-    console.log("Content-Type header:", req.headers["content-type"]);
-    console.log("Request body:", req.body);
-    console.log("Request body type:", typeof req.body);
-    console.log(
-      "Request body keys:",
-      req.body ? Object.keys(req.body) : "undefined"
-    );
-    console.log(
-      "Body length:",
-      req.body ? JSON.stringify(req.body).length : "undefined"
-    );
-    console.log("==========================");
-
     // req.user is set by protectRoute middleware
     const userId = req.user?._id;
     if (!userId) {
-      return res.status(401).json({
+      return res.status(404).json({
         success: false,
-        message: "Unauthorized",
+        message: "User not found",
       });
     }
 
@@ -210,7 +190,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     if (!updatedUser) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: "User not found or updated",
       });
     }
 
@@ -226,6 +206,21 @@ export const updateProfile = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.log("Error in updateProfile controller", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const checkAuth = async (req: Request, res: Response) => {
+  try {
+    res.status(200).json({
+      success: true,
+      message: "User is authenticated",
+    });
+  } catch (error) {
+    console.log("Error in checkAuth controller", error);
     res.status(500).json({
       success: false,
       message: "Internal server error",

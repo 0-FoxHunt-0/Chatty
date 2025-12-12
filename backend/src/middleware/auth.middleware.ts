@@ -39,9 +39,9 @@ export const protectRoute = async (
     }
     const user = await User.findById(decoded.id).select("-password");
     if (!user) {
-      return res.status(401).json({
+      return res.status(404).json({
         success: false,
-        message: "Unauthorized - User not found",
+        message: "User not found",
       });
     }
 
@@ -50,9 +50,9 @@ export const protectRoute = async (
     next();
   } catch (error) {
     console.log("Error in protectRoute middleware", error);
-    res.status(401).json({
+    return res.status(500).json({
       success: false,
-      message: "Unauthorized",
+      message: "Internal server error",
     });
   }
 };
