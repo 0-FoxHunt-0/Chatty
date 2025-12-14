@@ -9,7 +9,7 @@ export const signup = async (req: Request, res: Response) => {
   const userData: IUser = req.body;
   const salt = await bcrypt.genSalt(10); //* Salt generation
 
-  if (!userData.username || !userData.email || !userData.password) {
+  if (!userData.fullName || !userData.email || !userData.password) {
     return res.status(400).json({
       success: false,
       message: "All fields are required",
@@ -38,7 +38,7 @@ export const signup = async (req: Request, res: Response) => {
 
     //* User creation
     const user = await User.create({
-      username: userData.username,
+      fullName: userData.fullName,
       email: userData.email,
       password: hashedPassword,
       profilePicture: userData?.profilePicture || "",
@@ -54,7 +54,7 @@ export const signup = async (req: Request, res: Response) => {
         message: "User created successfully",
         user: {
           _id: user._id,
-          username: user.username,
+          fullName: user.fullName,
           email: user.email,
           profilePicture: user.profilePicture,
         },
@@ -109,7 +109,7 @@ export const login = async (req: Request, res: Response) => {
       message: "Login successful",
       user: {
         _id: user._id,
-        username: user.username,
+        fullName: user.fullName,
         email: user.email,
         profilePicture: user.profilePicture,
       },
@@ -164,13 +164,13 @@ export const updateProfile = async (req: Request, res: Response) => {
       });
     }
 
-    const { username, profilePicture } = req.body;
+    const { fullName, profilePicture } = req.body;
 
     // Validate required fields
-    if (!username || !profilePicture) {
+    if (!fullName || !profilePicture) {
       return res.status(400).json({
         success: false,
-        message: "Username and profile picture are required",
+        message: "fullName and profile picture are required",
       });
     }
 
@@ -180,7 +180,7 @@ export const updateProfile = async (req: Request, res: Response) => {
       userId,
       {
         $set: {
-          username,
+          fullName,
           profilePicture: uploadResponse.secure_url,
         },
       },
@@ -199,7 +199,7 @@ export const updateProfile = async (req: Request, res: Response) => {
       message: "Profile updated successfully",
       user: {
         _id: updatedUser._id,
-        username: updatedUser.username,
+        fullName: updatedUser.fullName,
         email: updatedUser.email,
         profilePicture: updatedUser.profilePicture,
       },
@@ -229,7 +229,7 @@ export const checkAuth = async (req: Request, res: Response) => {
       message: "User is authenticated",
       user: {
         _id: user._id,
-        username: user.username,
+        fullName: user.fullName,
         email: user.email,
         profilePicture: user.profilePicture,
       },
