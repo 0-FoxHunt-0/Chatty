@@ -215,9 +215,24 @@ export const updateProfile = async (req: Request, res: Response) => {
 
 export const checkAuth = async (req: Request, res: Response) => {
   try {
+    // req.user is set by protectRoute middleware
+    const user = req.user;
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
+      });
+    }
+
     res.status(200).json({
       success: true,
       message: "User is authenticated",
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        profilePicture: user.profilePicture,
+      },
     });
   } catch (error) {
     console.log("Error in checkAuth controller", error);
