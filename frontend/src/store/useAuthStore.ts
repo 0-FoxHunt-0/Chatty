@@ -20,6 +20,7 @@ interface IAuthStore {
     password: string;
   }) => Promise<void>;
   logout: () => Promise<void>;
+  login: (formData: { email: string; password: string }) => Promise<void>;
 }
 
 export const useAuthStore = create<IAuthStore>((set) => ({
@@ -38,7 +39,10 @@ export const useAuthStore = create<IAuthStore>((set) => ({
       if (axiosError?.response?.status === 401) {
         set({ user: null, isLoading: false, error: null });
       } else {
-        set({ error: axiosError.message || "An error occurred", isLoading: false });
+        set({
+          error: axiosError.message || "An error occurred",
+          isLoading: false,
+        });
         set({ user: null });
         showToast.error("Failed to check authentication status");
       }
@@ -65,6 +69,19 @@ export const useAuthStore = create<IAuthStore>((set) => ({
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
       showToast.error("Failed to logout");
+    }
+  },
+  login: async (formData) => {
+    set({ isLoading: true });
+    try {
+      const response = await axiosInstance.post("/auth/login", formData);
+      set({ user: response.data.user, isLoading: false });
+      showToast.success(response.data.message);
+    } catch (error) {
+      const axiosError = error as AxiosError;
+      set({ error: axiosError.message || "An error occurred", isLoading: false });
+      set({ user: null });
+      showToast.error("Failed to login");
     }
   },
 }));

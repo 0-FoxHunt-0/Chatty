@@ -18,12 +18,12 @@ export const showToast = {
     dismissAll();
     return toast.loading(message);
   },
-  promise: <T,>(
+  promise: <T>(
     promise: Promise<T>,
     messages: {
       loading: string;
       success: string | ((data: T) => string);
-      error: string | ((error: any) => string);
+      error: string | ((error: unknown) => string);
     }
   ) => {
     dismissAll();

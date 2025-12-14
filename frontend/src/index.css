@@ -1,2 +1,94 @@
 @import "tailwindcss";
 @plugin "daisyui";
+
+/* Prevent DarkReader from overriding styles */
+html {
+  color-scheme: light dark;
+}
+
+/* Protect DaisyUI theme variables from DarkReader */
+:root,
+[data-theme] {
+  color-scheme: light dark;
+}
+
+/* Force specific color values that DarkReader respects less */
+body {
+  color-scheme: light dark;
+}
+
+/* Comprehensive protection for DaisyUI classes used across components */
+
+/* Background colors */
+.bg-base-100,
+.bg-base-200,
+.bg-base-300,
+.bg-primary,
+.bg-primary\/10,
+.bg-primary\/20 {
+  color-scheme: light dark;
+}
+
+/* Text colors */
+.text-base-content,
+.text-base-content\/60,
+.text-primary {
+  color-scheme: light dark;
+}
+
+/* Form elements */
+.input,
+.input-bordered,
+.form-control,
+.label,
+.label-text {
+  color-scheme: light dark;
+}
+
+/* Buttons */
+.btn,
+.btn-primary,
+.btn-ghost {
+  color-scheme: light dark;
+}
+
+/* Cards */
+.card,
+.card-body {
+  color-scheme: light dark;
+}
+
+/* Navigation */
+.navbar,
+.menu,
+.menu-horizontal {
+  color-scheme: light dark;
+}
+
+/* Links */
+.link,
+.link-primary {
+  color-scheme: light dark;
+}
+
+/* Select elements */
+.select,
+.select-bordered {
+  color-scheme: light dark;
+}
+
+/* Grid and layout */
+.min-h-screen,
+.grid,
+.lg\:grid-cols-2 {
+  color-scheme: light dark;
+}
+
+/* Protect all elements with DaisyUI classes */
+[class*="bg-"],
+[class*="text-"],
+[class*="btn-"],
+[class*="input-"],
+[class*="card-"] {
+  color-scheme: light dark;
+}
