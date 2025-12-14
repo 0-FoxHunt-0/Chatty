@@ -30,9 +30,16 @@ export const useAuthStore = create<IAuthStore>((set) => ({
     try {
       const response = await axiosInstance.get("/auth/check-auth");
       set({ user: response.data.user, isLoading: false });
-    } catch (error) {
-      set({ error: (error as Error).message, isLoading: false });
-      set({ user: null });
+    } catch (error: any) {
+      // Silently handle 401 errors (expected when user is not logged in)
+      // Only show toasts for unexpected errors
+      if (error?.response?.status === 401) {
+        set({ user: null, isLoading: false, error: null });
+      } else {
+        set({ error: (error as Error).message, isLoading: false });
+        set({ user: null });
+        showToast.error("Failed to check authentication status");
+      }
     }
   },
   signup: async (formData) => {
