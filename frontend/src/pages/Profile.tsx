@@ -8,20 +8,22 @@ const Profile = () => {
   const { user } = useAuthStore();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
-  
+  const [pendingNavigation, setPendingNavigation] = useState<
+    (() => void) | null
+  >(null);
+
   // Form state
   const [formData, setFormData] = useState({
     fullName: user?.fullName || "",
     email: user?.email || "",
-    bio: "", // TODO: Add bio to user model if needed
+    bio: user?.bio || "",
   });
 
   // Track original values to detect changes
   const [originalData, setOriginalData] = useState({
     fullName: user?.fullName || "",
     email: user?.email || "",
-    bio: "",
+    bio: user?.bio || "",
     profilePicture: user?.profilePicture || null,
   });
 
@@ -38,12 +40,12 @@ const Profile = () => {
       setFormData({
         fullName: user.fullName || "",
         email: user.email || "",
-        bio: "", // TODO: Add bio to user model
+        bio: user.bio || "",
       });
       setOriginalData({
         fullName: user.fullName || "",
         email: user.email || "",
-        bio: "",
+        bio: user.bio || "",
         profilePicture: user.profilePicture || null,
       });
     }
@@ -95,11 +97,11 @@ const Profile = () => {
     fileInputRef.current?.click();
   };
 
-  const handleInputChange = (field: keyof typeof formData) => (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setFormData({ ...formData, [field]: e.target.value });
-  };
+  const handleInputChange =
+    (field: keyof typeof formData) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setFormData({ ...formData, [field]: e.target.value });
+    };
 
   const handleSaveChanges = (): void => {
     // TODO: Implement save functionality
@@ -239,10 +241,7 @@ const Profile = () => {
             </div>
             {hasUnsavedChanges && (
               <div className="card-actions justify-end mt-6">
-                <button
-                  onClick={handleSaveChanges}
-                  className="btn btn-primary"
-                >
+                <button onClick={handleSaveChanges} className="btn btn-primary">
                   Save Changes
                 </button>
               </div>

@@ -9,6 +9,7 @@ interface IAuthStore {
     fullName: string;
     email: string;
     profilePicture: string;
+    bio: string;
     token: string;
   } | null;
   isLoading: boolean;

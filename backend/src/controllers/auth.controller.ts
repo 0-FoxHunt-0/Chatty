@@ -42,6 +42,7 @@ export const signup = async (req: Request, res: Response) => {
       email: userData.email,
       password: hashedPassword,
       profilePicture: userData?.profilePicture || "",
+      bio: userData?.bio || "",
     });
 
     if (user) {
@@ -57,6 +58,7 @@ export const signup = async (req: Request, res: Response) => {
           fullName: user.fullName,
           email: user.email,
           profilePicture: user.profilePicture,
+          bio: user.bio,
         },
       });
     }
@@ -112,6 +114,7 @@ export const login = async (req: Request, res: Response) => {
         fullName: user.fullName,
         email: user.email,
         profilePicture: user.profilePicture,
+        bio: user.bio,
       },
     });
   } catch (error) {
@@ -164,25 +167,37 @@ export const updateProfile = async (req: Request, res: Response) => {
       });
     }
 
-    const { fullName, profilePicture } = req.body;
+    const { fullName, email, bio, profilePicture } = req.body;
 
     // Validate required fields
-    if (!fullName || !profilePicture) {
+    if (!fullName) {
       return res.status(400).json({
         success: false,
-        message: "fullName and profile picture are required",
+        message: "fullName is required",
       });
     }
 
-    const uploadResponse = await cloudinary.uploader.upload(profilePicture);
+    const updateData: any = {
+      fullName,
+    };
+
+    if (email) {
+      updateData.email = email;
+    }
+
+    if (bio !== undefined) {
+      updateData.bio = bio;
+    }
+
+    if (profilePicture) {
+      const uploadResponse = await cloudinary.uploader.upload(profilePicture);
+      updateData.profilePicture = uploadResponse.secure_url;
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       {
-        $set: {
-          fullName,
-          profilePicture: uploadResponse.secure_url,
-        },
+        $set: updateData,
       },
       { new: true, runValidators: true, select: "-password" }
     );
@@ -202,6 +217,7 @@ export const updateProfile = async (req: Request, res: Response) => {
         fullName: updatedUser.fullName,
         email: updatedUser.email,
         profilePicture: updatedUser.profilePicture,
+        bio: updatedUser.bio,
       },
     });
   } catch (error) {
@@ -232,6 +248,7 @@ export const checkAuth = async (req: Request, res: Response) => {
         fullName: user.fullName,
         email: user.email,
         profilePicture: user.profilePicture,
+        bio: user.bio,
       },
     });
   } catch (error) {
