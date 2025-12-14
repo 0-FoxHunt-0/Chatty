@@ -1,17 +1,24 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { LogOutIcon, MessageSquare } from "lucide-react";
+import { LogOutIcon, MessageSquare, Settings, UserIcon } from "lucide-react";
 
 const Navbar = () => {
   const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const handleLogout = async () => {
+    await logout();
+    navigate("/");
+  };
   return (
-    <header
-      className="border-b border-base-300 fixed w-full top-0 z-40 backdrop-blur-lg bg-base-100/80"
-    >
+    <header className="border-b border-base-300 sticky w-full top-0 z-40 backdrop-blur-lg bg-base-100">
       <div className="container mx-auto px-4 h-16">
         <div className="flex items-center justify-between h-full">
           <div className="flex items-center gap-8">
-            <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-all">
+            <Link
+              to="/"
+              className="flex items-center gap-2.5 hover:opacity-80 transition-all"
+            >
               <div className="size-9 rounded-lg bg-primary/10 flex items-center justify-center">
                 <MessageSquare className="w-5 h-5 text-primary" />
               </div>
@@ -23,25 +30,49 @@ const Navbar = () => {
               {user ? (
                 <>
                   <li>
-                    <Link to="/settings" className="hover:underline">Settings</Link>
+                    <Link
+                      to="/settings"
+                      className="flex items-center gap-2 hover:opacity-80 transition-colors"
+                    >
+                      <Settings className="w-5 h-5" />
+                      <span>Settings</span>
+                    </Link>
                   </li>
                   <li>
-                    <Link to="/profile" className="hover:underline">Profile</Link>
+                    <Link
+                      to="/profile"
+                      className="flex items-center gap-2 hover:opacity-80 transition-colors"
+                    >
+                      <UserIcon className="w-5 h-5" />
+                      <span>Profile</span>
+                    </Link>
                   </li>
                   <li>
-                    <button onClick={() => logout()} className="hover:text-error transition-colors">
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 hover:text-error transition-colors cursor-pointer"
+                    >
                       <LogOutIcon className="w-5 h-5" />
+                      <span>Logout</span>
                     </button>
                   </li>
                 </>
               ) : (
                 <>
-                  <li>
-                    <Link to="/login" className="hover:underline">Login</Link>
-                  </li>
-                  <li>
-                    <Link to="/register" className="hover:underline">Register</Link>
-                  </li>
+                  {location.pathname !== "/login" && (
+                    <li>
+                      <Link to="/login" className="hover:underline">
+                        Login
+                      </Link>
+                    </li>
+                  )}
+                  {location.pathname !== "/register" && (
+                    <li>
+                      <Link to="/register" className="hover:underline">
+                        Register
+                      </Link>
+                    </li>
+                  )}
                 </>
               )}
             </ul>
