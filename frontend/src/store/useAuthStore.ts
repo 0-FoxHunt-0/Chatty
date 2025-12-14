@@ -9,7 +9,7 @@ interface IAuthStore {
     fullName: string;
     email: string;
     profilePicture: string;
-    bio: string;
+    bio?: string;
     token: string;
   } | null;
   isLoading: boolean;
@@ -80,7 +80,10 @@ export const useAuthStore = create<IAuthStore>((set) => ({
       showToast.success(response.data.message);
     } catch (error) {
       const axiosError = error as AxiosError;
-      set({ error: axiosError.message || "An error occurred", isLoading: false });
+      set({
+        error: axiosError.message || "An error occurred",
+        isLoading: false,
+      });
       set({ user: null });
       showToast.error("Failed to login");
     }
