@@ -1,6 +1,13 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { LogOutIcon, MessageSquare, Settings, UserIcon } from "lucide-react";
+import {
+  LogInIcon,
+  LogOutIcon,
+  MessageSquare,
+  Settings,
+  UserRoundIcon,
+  UserRoundPlusIcon,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 
 const Navbar = () => {
@@ -73,7 +80,7 @@ const Navbar = () => {
                       to="/profile"
                       className="flex items-center gap-2 hover:opacity-80 transition-colors"
                     >
-                      <UserIcon className="w-5 h-5" />
+                      <UserRoundIcon className="w-5 h-5" />
                       <span>Profile</span>
                     </Link>
                   </li>
@@ -91,15 +98,21 @@ const Navbar = () => {
                 <>
                   {location.pathname !== "/login" && (
                     <li>
-                      <Link to="/login" className="hover:underline">
-                        Login
+                      <Link
+                        to="/login"
+                        className="flex items-center gap-2 hover:opacity-80 transition-colors"
+                      >
+                        <LogInIcon className="w-5 h-5" /> Login
                       </Link>
                     </li>
                   )}
                   {location.pathname !== "/register" && (
                     <li>
-                      <Link to="/register" className="hover:underline">
-                        Register
+                      <Link
+                        to="/register"
+                        className="flex items-center gap-2 hover:opacity-80 transition-colors"
+                      >
+                        <UserRoundPlusIcon className="w-5 h-5" /> Register
                       </Link>
                     </li>
                   )}
