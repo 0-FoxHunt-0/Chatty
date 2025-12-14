@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { axiosInstance } from "../lib/axios";
 import { showToast } from "../lib/toast";
+import { AxiosError } from "axios";
 
 interface IAuthStore {
   user: {
@@ -30,13 +31,14 @@ export const useAuthStore = create<IAuthStore>((set) => ({
     try {
       const response = await axiosInstance.get("/auth/check-auth");
       set({ user: response.data.user, isLoading: false });
-    } catch (error: any) {
+    } catch (error) {
       // Silently handle 401 errors (expected when user is not logged in)
       // Only show toasts for unexpected errors
-      if (error?.response?.status === 401) {
+      const axiosError = error as AxiosError;
+      if (axiosError?.response?.status === 401) {
         set({ user: null, isLoading: false, error: null });
       } else {
-        set({ error: (error as Error).message, isLoading: false });
+        set({ error: axiosError.message || "An error occurred", isLoading: false });
         set({ user: null });
         showToast.error("Failed to check authentication status");
       }
