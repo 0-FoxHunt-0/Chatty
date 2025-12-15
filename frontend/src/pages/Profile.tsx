@@ -2,15 +2,18 @@ import { useRef, useState, useEffect } from "react";
 import { Pencil } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useBlocker } from "react-router-dom";
+import { generateAndUploadAvatar } from "../lib/avatar";
 
 const Profile = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { user } = useAuthStore();
+  const avatarGenerationAttempted = useRef<string | null>(null);
+  const { user, updateProfile } = useAuthStore();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingNavigation, setPendingNavigation] = useState<
     (() => void) | null
   >(null);
+  const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -50,6 +53,45 @@ const Profile = () => {
       });
     }
   }, [user]);
+
+  // Auto-generate avatar if profile picture is missing
+  useEffect(() => {
+    const generateAvatarIfNeeded = async () => {
+      if (!user || !user._id || !user.fullName) return;
+
+      // Check if user has a profile picture
+      const hasProfilePicture =
+        user.profilePicture &&
+        user.profilePicture !== "" &&
+        user.profilePicture !== null;
+
+      // Check if we've already attempted generation for this user
+      const hasAttempted = avatarGenerationAttempted.current === user._id;
+
+      if (!hasProfilePicture && !hasAttempted && !isGeneratingAvatar) {
+        avatarGenerationAttempted.current = user._id;
+        setIsGeneratingAvatar(true);
+        try {
+          await generateAndUploadAvatar(
+            user.fullName,
+            user.email,
+            updateProfile,
+            user.bio
+          );
+        } catch (error) {
+          console.error("Failed to generate avatar:", error);
+          // Reset the attempt flag on error so it can be retried
+          avatarGenerationAttempted.current = null;
+          // Don't show error toast as this is automatic and non-critical
+        } finally {
+          setIsGeneratingAvatar(false);
+        }
+      }
+    };
+
+    generateAvatarIfNeeded();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?._id, user?.profilePicture, user?.fullName]);
 
   // Navigation blocker
   const blocker = useBlocker(

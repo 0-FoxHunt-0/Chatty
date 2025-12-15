@@ -22,6 +22,12 @@ interface IAuthStore {
   }) => Promise<void>;
   logout: () => Promise<void>;
   login: (formData: { email: string; password: string }) => Promise<void>;
+  updateProfile: (formData: {
+    fullName: string;
+    email: string;
+    bio?: string;
+    profilePicture?: string;
+  }) => Promise<void>;
 }
 
 export const useAuthStore = create<IAuthStore>((set) => ({
@@ -86,6 +92,20 @@ export const useAuthStore = create<IAuthStore>((set) => ({
       });
       set({ user: null });
       showToast.error("Failed to login");
+    }
+  },
+  updateProfile: async (formData) => {
+    set({ isLoading: true });
+    try {
+      const response = await axiosInstance.put(
+        "/auth/update-profile",
+        formData
+      );
+      set({ user: response.data.user, isLoading: false });
+      showToast.success(response.data.message);
+    } catch (error) {
+      set({ error: (error as Error).message, isLoading: false });
+      showToast.error("Failed to update profile");
     }
   },
 }));
