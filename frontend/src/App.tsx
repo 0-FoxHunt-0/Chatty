@@ -7,18 +7,23 @@ import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import { useEffect } from "react";
 import { useAuthStore } from "./store/useAuthStore";
+import { useThemeStore } from "./store/useThemeStore";
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 
 const App = () => {
   const { initializeAuth, user, isLoading, isInitialized } = useAuthStore();
-  
+  const { initializeTheme } = useThemeStore();
+
   useEffect(() => {
+    // Initialize theme first
+    initializeTheme();
+
     // Initialize auth - checks cache first, only calls API if cache exists
     if (!isInitialized) {
       initializeAuth();
     }
-  }, [initializeAuth, isInitialized]);
+  }, [initializeAuth, isInitialized, initializeTheme]);
 
   // Show loading until initialization is complete
   if (!isInitialized || (isLoading && !user))
