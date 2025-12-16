@@ -8,6 +8,7 @@ import {
   User,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { showToast } from "../lib/toast";
 import { useAuthStore } from "../store/useAuthStore";
 import { Link, useNavigate } from "react-router-dom";
@@ -23,10 +24,17 @@ const Register = () => {
   const navigate = useNavigate();
   const { signup, isLoading, user, error } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
-    fullName: "",
-    email: "",
-    password: "",
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormData>({
+    defaultValues: {
+      fullName: "",
+      email: "",
+      password: "",
+    },
   });
 
   // Navigate to home after successful registration
@@ -44,43 +52,9 @@ const Register = () => {
     }
   }, [error]);
 
-  const validateForm = (): string | null => {
-    if (formData.fullName.trim() === "") {
-      return "Full name is required";
-    }
-    const trimmedEmail = formData.email.trim();
-    if (trimmedEmail === "") {
-      return "Email is required";
-    }
-    // Simplified email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      return "Invalid email address";
-    }
-    const trimmedPassword = formData.password.trim();
-    if (trimmedPassword === "") {
-      return "Password is required";
-    }
-    if (trimmedPassword.length < 6) {
-      return "Password must be at least 6 characters long";
-    }
-    return null;
+  const onSubmit = async (data: FormData) => {
+    await signup(data);
   };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const error = validateForm();
-    if (error) {
-      showToast.error(error);
-      return;
-    }
-    await signup(formData);
-  };
-
-  const handleInputChange =
-    (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
-      setFormData({ ...formData, [field]: e.target.value });
-    };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
@@ -99,7 +73,11 @@ const Register = () => {
             </p>
           </div>
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-6"
+            noValidate
+          >
             <div className="form-control">
               <label className="label" htmlFor="fullName">
                 <span className="label-text font-medium">Full Name</span>
@@ -115,15 +93,30 @@ const Register = () => {
                 <input
                   id="fullName"
                   type="text"
-                  className="input input-bordered w-full pl-10"
+                  className={`input input-bordered w-full pl-10 ${
+                    errors.fullName ? "input-error" : ""
+                  }`}
                   placeholder="John Doe"
-                  value={formData.fullName}
-                  onChange={handleInputChange("fullName")}
+                  {...register("fullName", {
+                    required: "Full name is required",
+                    validate: (value) => {
+                      if (value.trim() === "") {
+                        return "Full name cannot be empty";
+                      }
+                      return true;
+                    },
+                  })}
                   autoComplete="name"
-                  required
                   aria-required="true"
                 />
               </div>
+              {errors.fullName && (
+                <label className="label">
+                  <span className="label-text-alt text-error">
+                    {errors.fullName.message}
+                  </span>
+                </label>
+              )}
             </div>
             <div className="form-control">
               <label className="label" htmlFor="email">
@@ -140,15 +133,28 @@ const Register = () => {
                 <input
                   id="email"
                   type="email"
-                  className="input input-bordered w-full pl-10"
+                  className={`input input-bordered w-full pl-10 ${
+                    errors.email ? "input-error" : ""
+                  }`}
                   placeholder="john.doe@example.com"
-                  value={formData.email}
-                  onChange={handleInputChange("email")}
+                  {...register("email", {
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
+                      message: "Invalid email address",
+                    },
+                  })}
                   autoComplete="email"
-                  required
                   aria-required="true"
                 />
               </div>
+              {errors.email && (
+                <label className="label">
+                  <span className="label-text-alt text-error">
+                    {errors.email.message}
+                  </span>
+                </label>
+              )}
             </div>
             <div className="form-control">
               <label className="label" htmlFor="password">
@@ -165,14 +171,19 @@ const Register = () => {
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  className="input input-bordered w-full pl-10 pr-10"
+                  className={`input input-bordered w-full pl-10 pr-10 ${
+                    errors.password ? "input-error" : ""
+                  }`}
                   placeholder="****************"
-                  value={formData.password}
-                  onChange={handleInputChange("password")}
+                  {...register("password", {
+                    required: "Password is required",
+                    minLength: {
+                      value: 6,
+                      message: "Password must be at least 6 characters long",
+                    },
+                  })}
                   autoComplete="new-password"
-                  required
                   aria-required="true"
-                  minLength={6}
                 />
                 <button
                   type="button"
@@ -194,6 +205,13 @@ const Register = () => {
                   )}
                 </button>
               </div>
+              {errors.password && (
+                <label className="label">
+                  <span className="label-text-alt text-error">
+                    {errors.password.message}
+                  </span>
+                </label>
+              )}
             </div>
             <div className="form-control mt-6">
               <button

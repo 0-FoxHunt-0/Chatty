@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { useAuthStore } from "../store/useAuthStore";
 import { showToast } from "../lib/toast";
 import {
@@ -21,9 +22,16 @@ const Login = () => {
   const navigate = useNavigate();
   const { login, isLoading, user, error } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState<FormData>({
-    email: "",
-    password: "",
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormData>({
+    defaultValues: {
+      email: "",
+      password: "",
+    },
   });
 
   // Navigate to home after successful login
@@ -40,40 +48,9 @@ const Login = () => {
     }
   }, [error]);
 
-  const validateForm = (): string | null => {
-    const trimmedEmail = formData.email.trim();
-    if (trimmedEmail === "") {
-      return "Email is required";
-    }
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-    if (!emailRegex.test(trimmedEmail)) {
-      return "Invalid email address";
-    }
-    const trimmedPassword = formData.password.trim();
-    if (trimmedPassword === "") {
-      return "Password is required";
-    }
-    if (trimmedPassword.length < 6) {
-      return "Password must be at least 6 characters long";
-    }
-    return null;
+  const onSubmit = async (data: FormData) => {
+    await login(data);
   };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formError = validateForm();
-    if (formError) {
-      showToast.error(formError);
-      return;
-    }
-    await login(formData);
-  };
-
-  const handleInputChange =
-    (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
-      setFormData({ ...formData, [field]: e.target.value });
-    };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
@@ -92,7 +69,11 @@ const Login = () => {
             </p>
           </div>
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-6"
+            noValidate
+          >
             <div className="form-control">
               <label className="label" htmlFor="email">
                 <span className="label-text font-medium">Email</span>
@@ -108,15 +89,28 @@ const Login = () => {
                 <input
                   id="email"
                   type="email"
-                  className="input input-bordered w-full pl-10"
+                  className={`input input-bordered w-full pl-10 ${
+                    errors.email ? "input-error" : ""
+                  }`}
                   placeholder="john.doe@example.com"
-                  value={formData.email}
-                  onChange={handleInputChange("email")}
+                  {...register("email", {
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
+                      message: "Invalid email address",
+                    },
+                  })}
                   autoComplete="email"
-                  required
                   aria-required="true"
                 />
               </div>
+              {errors.email && (
+                <label className="label">
+                  <span className="label-text-alt text-error">
+                    {errors.email.message}
+                  </span>
+                </label>
+              )}
             </div>
             <div className="form-control">
               <label className="label" htmlFor="password">
@@ -133,14 +127,19 @@ const Login = () => {
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  className="input input-bordered w-full pl-10 pr-10"
+                  className={`input input-bordered w-full pl-10 pr-10 ${
+                    errors.password ? "input-error" : ""
+                  }`}
                   placeholder="****************"
-                  value={formData.password}
-                  onChange={handleInputChange("password")}
+                  {...register("password", {
+                    required: "Password is required",
+                    minLength: {
+                      value: 6,
+                      message: "Password must be at least 6 characters long",
+                    },
+                  })}
                   autoComplete="current-password"
-                  required
                   aria-required="true"
-                  minLength={6}
                 />
                 <button
                   type="button"
@@ -162,6 +161,13 @@ const Login = () => {
                   )}
                 </button>
               </div>
+              {errors.password && (
+                <label className="label">
+                  <span className="label-text-alt text-error">
+                    {errors.password.message}
+                  </span>
+                </label>
+              )}
             </div>
             <div className="form-control mt-6">
               <button

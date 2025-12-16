@@ -1,8 +1,15 @@
 import { useRef, useState, useEffect } from "react";
-import { Pencil, Camera } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { Camera, User, Mail, Pencil } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useBlocker } from "react-router-dom";
 import { generateAndUploadAvatar } from "../lib/avatar";
+
+interface ProfileFormData {
+  fullName: string;
+  email: string;
+  bio: string;
+}
 
 const Profile = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -14,14 +21,8 @@ const Profile = () => {
     (() => void) | null
   >(null);
   const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
-  const [isUploadingProfilePicture, setIsUploadingProfilePicture] = useState(false);
-
-  // Form state
-  const [formData, setFormData] = useState({
-    fullName: user?.fullName || "",
-    email: user?.email || "",
-    bio: user?.bio || "",
-  });
+  const [isUploadingProfilePicture, setIsUploadingProfilePicture] =
+    useState(false);
 
   // Track original values to detect changes
   const [originalData, setOriginalData] = useState({
@@ -31,16 +32,32 @@ const Profile = () => {
     profilePicture: user?.profilePicture || null,
   });
 
+  const {
+    register,
+    handleSubmit,
+    watch,
+    getValues,
+    reset,
+    formState: { errors, isDirty },
+  } = useForm<ProfileFormData>({
+    defaultValues: {
+      fullName: user?.fullName || "",
+      email: user?.email || "",
+      bio: user?.bio || "",
+    },
+  });
+
+  // Watch form values to detect changes
+  watch();
+
   // Check if there are unsaved changes
   const hasUnsavedChanges =
-    formData.fullName !== originalData.fullName ||
-    formData.email !== originalData.email ||
-    formData.bio !== originalData.bio;
+    isDirty || isUploadingProfilePicture || previewUrl !== null;
 
   // Initialize form data when user loads
   useEffect(() => {
     if (user) {
-      setFormData({
+      reset({
         fullName: user.fullName || "",
         email: user.email || "",
         bio: user.bio || "",
@@ -52,7 +69,7 @@ const Profile = () => {
         profilePicture: user.profilePicture || null,
       });
     }
-  }, [user]);
+  }, [user, reset]);
 
   // Auto-generate avatar if profile picture is missing
   useEffect(() => {
@@ -120,7 +137,9 @@ const Profile = () => {
     });
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>): Promise<void> => {
+  const handleFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ): Promise<void> => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
@@ -138,11 +157,12 @@ const Profile = () => {
       // Convert file to base64
       const base64Image = await fileToBase64(file);
 
-      // Upload immediately
+      // Upload immediately with current form data (not stale user data)
+      const currentValues = getValues();
       await updateProfile({
-        fullName: user.fullName,
-        email: user.email,
-        bio: user.bio,
+        fullName: currentValues.fullName,
+        email: currentValues.email,
+        bio: currentValues.bio,
         profilePicture: base64Image,
       });
 
@@ -175,27 +195,29 @@ const Profile = () => {
     fileInputRef.current?.click();
   };
 
-  const handleInputChange =
-    (field: keyof typeof formData) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setFormData({ ...formData, [field]: e.target.value });
-    };
-
-  const handleSaveChanges = async (): Promise<void> => {
+  const onSaveChanges = async (data: ProfileFormData): Promise<void> => {
     if (!user) return;
 
     try {
       await updateProfile({
-        fullName: formData.fullName,
-        email: formData.email,
-        bio: formData.bio,
+        fullName: data.fullName,
+        email: data.email,
+        bio: data.bio,
+      });
+
+      // Reset form to mark as not dirty after successful save
+      // This sets the saved values as the new default values, making isDirty false
+      reset({
+        fullName: data.fullName,
+        email: data.email,
+        bio: data.bio,
       });
 
       // Reset original data to current form data after successful save
       setOriginalData({
-        fullName: formData.fullName,
-        email: formData.email,
-        bio: formData.bio,
+        fullName: data.fullName,
+        email: data.email,
+        bio: data.bio,
         profilePicture: user.profilePicture || originalData.profilePicture,
       });
     } catch (error) {
@@ -205,7 +227,7 @@ const Profile = () => {
 
   const handleDiscardChanges = () => {
     // Reset form data to original values
-    setFormData({
+    reset({
       fullName: originalData.fullName,
       email: originalData.email,
       bio: originalData.bio,
@@ -232,16 +254,45 @@ const Profile = () => {
   // Determine which image to display: preview > existing profile picture > placeholder
   const displayImage = previewUrl || user?.profilePicture || null;
 
+  // Get user initials (first letter of first name and first letter of last name)
+  const getUserInitials = (): string => {
+    if (!user?.fullName) return "U";
+    const names = user.fullName.trim().split(/\s+/);
+    if (names.length >= 2) {
+      return (names[0][0] + names[names.length - 1][0]).toUpperCase();
+    }
+    return user.fullName[0].toUpperCase();
+  };
+
+  // Format date for Member Since
+  const formatMemberSince = (): string => {
+    // For now, return a placeholder. You can add createdAt to user object later
+    return new Date().toISOString().split("T")[0];
+  };
+
   return (
     <div className="min-h-screen bg-base-100 p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-bold mb-6">Profile</h1>
         <div className="card bg-base-200 shadow-xl">
           <div className="card-body">
-            <div className="flex flex-col items-center mb-6">
-              <div className="avatar placeholder mb-4 relative group">
+            {/* Title and Subtitle */}
+            <div className="mb-8 text-center">
+              <h1 className="text-2xl font-bold mb-2 text-base-content">
+                Profile
+              </h1>
+              <p className="text-base-content/70 text-sm">
+                Your profile information
+              </p>
+            </div>
+
+            {/* Profile Picture Section */}
+            <div className="flex flex-col items-center mb-8">
+              <div className="relative mb-4 group">
                 {displayImage ? (
-                  <div className="w-24 rounded-full overflow-hidden relative">
+                  <div
+                    className="w-32 h-32 rounded-full overflow-hidden relative cursor-pointer"
+                    onClick={handleAvatarClick}
+                  >
                     <img
                       src={displayImage}
                       alt="Profile"
@@ -254,43 +305,47 @@ const Profile = () => {
                         <div className="loading loading-spinner loading-md"></div>
                       </div>
                     )}
+                    {/* Hover overlay with Pencil icon and Edit text */}
+                    <div className="absolute inset-0 bg-black/50 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <Pencil className="w-6 h-6 text-white mb-1" />
+                      <span className="text-white text-sm font-medium">
+                        Edit
+                      </span>
+                    </div>
                   </div>
                 ) : (
-                  <div className="bg-neutral text-neutral-content rounded-full w-24 relative">
-                    <span className="text-3xl">
-                      {user?.fullName?.[0]?.toUpperCase() || "U"}
+                  <div
+                    className="bg-red-500 text-white rounded-full w-32 h-32 flex items-center justify-center relative cursor-pointer"
+                    onClick={handleAvatarClick}
+                  >
+                    <span className="text-4xl font-semibold">
+                      {getUserInitials()}
                     </span>
                     {isUploadingProfilePicture && (
                       <div className="absolute inset-0 bg-base-200/80 rounded-full flex items-center justify-center animate-pulse">
                         <div className="loading loading-spinner loading-md"></div>
                       </div>
                     )}
+                    {/* Hover overlay with Pencil icon and Edit text */}
+                    <div className="absolute inset-0 bg-black/50 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <Pencil className="w-6 h-6 text-white mb-1" />
+                      <span className="text-white text-sm font-medium">
+                        Edit
+                      </span>
+                    </div>
                   </div>
                 )}
-                {/* Desktop: Hover overlay - clickable */}
-                <div
-                  className="absolute inset-0 bg-black/50 rounded-full flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer hidden md:flex"
-                  onClick={handleAvatarClick}
-                >
-                  <Pencil className="w-6 h-6 text-white mb-1" />
-                  <span className="text-white text-sm font-medium">Edit</span>
-                </div>
-                {/* Mobile: Camera button */}
+                {/* Camera icon button on bottom right - for mobile/accessibility */}
                 <label
                   htmlFor="avatar-upload"
-                  className={`absolute bottom-0 right-0 bg-base-content hover:scale-105 p-2 rounded-full cursor-pointer transition-all duration-200 md:hidden ${
+                  className={`absolute bottom-0 right-0 bg-base-300 p-2.5 rounded-full cursor-pointer transition-all duration-200 shadow-lg md:hidden ${
                     isUploadingProfilePicture
-                      ? "animate-pulse pointer-events-none"
-                      : ""
+                      ? "animate-pulse pointer-events-none opacity-50"
+                      : "hover:scale-110"
                   }`}
                 >
-                  <Camera className="w-5 h-5 text-base-200" />
+                  <Camera className="w-5 h-5 text-base-content" />
                 </label>
-                {/* Desktop: Clickable area for avatar */}
-                <div
-                  className="absolute inset-0 rounded-full cursor-pointer hidden md:block"
-                  onClick={handleAvatarClick}
-                ></div>
               </div>
               <input
                 type="file"
@@ -301,67 +356,135 @@ const Profile = () => {
                 onChange={handleFileChange}
                 disabled={isUploadingProfilePicture}
               />
-              <div className="w-full max-w-md space-y-4">
-                <div className="group relative">
-                  <label className="label">
-                    <span className="label-text font-semibold">Full Name</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={formData.fullName}
-                      onChange={handleInputChange("fullName")}
-                      className="input input-bordered w-full pr-10"
-                      placeholder="Full Name"
-                    />
-                    <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity pointer-events-none" />
-                  </div>
-                </div>
-                <div className="group relative">
-                  <label className="label">
-                    <span className="label-text font-semibold">Email</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={handleInputChange("email")}
-                      className="input input-bordered w-full pr-10"
-                      placeholder="Email"
-                    />
-                    <Pencil className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity pointer-events-none" />
-                  </div>
-                </div>
-              </div>
+              <p className="text-sm text-base-content/70 text-center">
+                <span className="md:hidden">
+                  Click the camera icon to update your photo
+                </span>
+                <span className="hidden md:inline">
+                  Click your photo to update
+                </span>
+              </p>
             </div>
-            <div className="divider"></div>
-            <div className="space-y-4">
-              <div className="group relative">
-                <label className="label">
-                  <span className="label-text font-semibold">Bio</span>
-                </label>
+
+            {/* Form Fields */}
+            <form onSubmit={handleSubmit(onSaveChanges)}>
+              <div className="w-full max-w-2xl mx-auto space-y-6 mb-8">
+                {/* Full Name */}
                 <div className="relative">
-                  <textarea
-                    value={formData.bio}
-                    onChange={handleInputChange("bio")}
-                    className="textarea textarea-bordered w-full pr-10 min-h-24"
-                    placeholder="This is a placeholder bio. Update your profile to add a personal bio."
+                  <label className="label">
+                    <span className="label-text font-semibold flex items-center gap-2 text-base-content">
+                      <User className="w-4 h-4" />
+                      Full Name
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    {...register("fullName", {
+                      required: "Full name is required",
+                    })}
+                    className={`input input-bordered w-full bg-base-100 text-base-content ${
+                      errors.fullName ? "input-error" : ""
+                    }`}
+                    placeholder="Full Name"
                   />
-                  <Pencil className="absolute right-3 top-3 w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity pointer-events-none" />
+                  {errors.fullName && (
+                    <label className="label">
+                      <span className="label-text-alt text-error">
+                        {errors.fullName.message}
+                      </span>
+                    </label>
+                  )}
+                </div>
+
+                {/* Email Address */}
+                <div className="relative">
+                  <label className="label">
+                    <span className="label-text font-semibold flex items-center gap-2 text-base-content">
+                      <Mail className="w-4 h-4" />
+                      Email Address
+                    </span>
+                  </label>
+                  <input
+                    type="email"
+                    {...register("email", {
+                      required: "Email is required",
+                      pattern: {
+                        value: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
+                        message: "Invalid email address",
+                      },
+                    })}
+                    className={`input input-bordered w-full bg-base-100 text-base-content ${
+                      errors.email ? "input-error" : ""
+                    }`}
+                    placeholder="Email Address"
+                  />
+                  {errors.email && (
+                    <label className="label">
+                      <span className="label-text-alt text-error">
+                        {errors.email.message}
+                      </span>
+                    </label>
+                  )}
+                </div>
+
+                {/* Bio */}
+                <div className="relative">
+                  <label className="label">
+                    <span className="label-text font-semibold text-base-content">
+                      Bio
+                    </span>
+                  </label>
+                  <textarea
+                    {...register("bio")}
+                    className="textarea textarea-bordered w-full bg-base-100 text-base-content min-h-24"
+                    placeholder="Tell us about yourself..."
+                  />
                 </div>
               </div>
-              <div>
-                <h3 className="font-semibold mb-2">Member Since</h3>
-                <p className="text-base-content/70">January 2024</p>
+
+              {/* Account Information Section */}
+              <div className="border-t border-base-300 pt-6 mt-6">
+                <h3 className="font-semibold text-lg mb-4 text-base-content">
+                  Account Information
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm text-base-content/70 block mb-1">
+                      Member Since:
+                    </span>
+                    <p className="text-base-content font-medium">
+                      {formatMemberSince()}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-base-content/70 block mb-1">
+                      Account Status:
+                    </span>
+                    <p className="text-success font-medium">Active</p>
+                  </div>
+                </div>
               </div>
-            </div>
-            {hasUnsavedChanges && (
-              <div className="card-actions justify-end mt-6">
-                <button onClick={handleSaveChanges} className="btn btn-primary">
-                  Save Changes
-                </button>
-              </div>
-            )}
+
+              {/* Save Changes Button */}
+              {hasUnsavedChanges && (
+                <div className="card-actions justify-end mt-6">
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={isUploadingProfilePicture}
+                  >
+                    {isUploadingProfilePicture ? (
+                      <>
+                        <span className="loading loading-spinner loading-sm"></span>
+                        Uploading...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </button>
+                </div>
+              )}
+            </form>
           </div>
         </div>
       </div>
