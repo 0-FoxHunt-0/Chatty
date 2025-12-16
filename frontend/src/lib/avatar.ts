@@ -26,7 +26,9 @@ export const generateInitialsAvatar = (fullName: string): string => {
  * @returns Base64 data URL string
  */
 export const svgToBase64 = (svg: string): string => {
-  const base64 = btoa(unescape(encodeURIComponent(svg)));
+  const bytes = new TextEncoder().encode(svg);
+  const binary = String.fromCharCode(...bytes);
+  const base64 = btoa(binary);
   return `data:image/svg+xml;base64,${base64}`;
 };
 
