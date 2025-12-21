@@ -6,6 +6,9 @@ import generateToken from "../lib/utils";
 import cloudinary from "../lib/cloudinary";
 
 export const signup = async (req: Request, res: Response) => {
+  console.log("=== SIGNUP REQUEST RECEIVED ===");
+  console.log("Request body:", { ...req.body, password: "[REDACTED]" });
+
   const userData: IUser = req.body;
   const salt = await bcrypt.genSalt(10); //* Salt generation
 
@@ -63,6 +66,19 @@ export const signup = async (req: Request, res: Response) => {
       });
     }
   } catch (error) {
+    console.error("=== ERROR IN SIGNUP CONTROLLER ===");
+    console.error(
+      "Error type:",
+      error instanceof Error ? error.constructor.name : typeof error
+    );
+    console.error(
+      "Error message:",
+      error instanceof Error ? error.message : String(error)
+    );
+    console.error("Full error:", error);
+    if (error instanceof Error) {
+      console.error("Error stack:", error.stack);
+    }
     //* Send error response
     res.status(500).json({
       success: false,

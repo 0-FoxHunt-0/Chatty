@@ -26,7 +26,7 @@ export const getUsersForSidebar = async (req: Request, res: Response) => {
 export const getMessages = async (req: Request, res: Response) => {
   try {
     const currentUserId = (req.user as IUser)?._id;
-    const otherUserId = req.params._id;
+    const otherUserId = req.params.id;
     const messages = await Message.find({
       $or: [
         { senderId: currentUserId, receiverId: otherUserId },
@@ -49,8 +49,22 @@ export const getMessages = async (req: Request, res: Response) => {
 export const sendMessage = async (req: Request, res: Response) => {
   try {
     const currentUserId = (req.user as IUser)?._id;
-    const otherUserId = req.params._id;
-    const { text, image } = req.body;
+    const otherUserId = req.params.id;
+    const { text, image }: { text: string; image?: string } = req.body;
+
+    if (!otherUserId) {
+      return res.status(400).json({
+        success: false,
+        message: "Receiver ID is required",
+      });
+    }
+
+    if (!currentUserId) {
+      return res.status(401).json({
+        success: false,
+        message: "User not authenticated",
+      });
+    }
 
     let imageUrl = null;
     if (image) {
