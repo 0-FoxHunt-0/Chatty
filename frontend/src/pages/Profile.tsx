@@ -271,8 +271,8 @@ const Profile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-base-100 p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="h-full bg-base-100 overflow-y-auto">
+      <div className="max-w-4xl mx-auto p-8">
         <div className="card bg-base-200 shadow-xl">
           <div className="card-body">
             {/* Title and Subtitle */}

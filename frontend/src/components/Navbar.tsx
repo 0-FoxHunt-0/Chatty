@@ -18,6 +18,17 @@ const Navbar = () => {
   const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
+    // Only enable scroll animation if user is not logged in and on Login/Register pages
+    const shouldEnableScrollAnimation =
+      !user &&
+      (location.pathname === "/login" || location.pathname === "/register");
+
+    // If scroll animation should not be active, always show navbar
+    if (!shouldEnableScrollAnimation) {
+      setIsVisible(true);
+      return;
+    }
+
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
@@ -37,7 +48,7 @@ const Navbar = () => {
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [lastScrollY]);
+  }, [lastScrollY, user, location.pathname]);
 
   const handleLogout = async () => {
     await logout();
@@ -49,7 +60,7 @@ const Navbar = () => {
         isVisible ? "translate-y-0" : "-translate-y-full"
       }`}
     >
-      <div className="container mx-auto px-4 h-16">
+      <div className="w-full px-[5%] h-16">
         <div className="flex items-center justify-between h-full">
           <div className="flex items-center gap-8">
             <Link
@@ -69,7 +80,7 @@ const Navbar = () => {
                   <li>
                     <Link
                       to="/settings"
-                      className="flex items-center gap-2 hover:opacity-80 transition-colors"
+                      className="flex items-center gap-4 hover:opacity-80 transition-colors"
                     >
                       <Settings className="w-5 h-5" />
                       <span>Settings</span>
@@ -78,7 +89,7 @@ const Navbar = () => {
                   <li>
                     <Link
                       to="/profile"
-                      className="flex items-center gap-2 hover:opacity-80 transition-colors"
+                      className="flex items-center gap-4 hover:opacity-80 transition-colors"
                     >
                       <UserRoundIcon className="w-5 h-5" />
                       <span>Profile</span>
@@ -87,7 +98,7 @@ const Navbar = () => {
                   <li>
                     <button
                       onClick={handleLogout}
-                      className="flex items-center gap-2 hover:text-error transition-colors cursor-pointer"
+                      className="flex items-center gap-4 hover:text-error transition-colors cursor-pointer"
                     >
                       <LogOutIcon className="w-5 h-5" />
                       <span>Logout</span>
@@ -100,7 +111,7 @@ const Navbar = () => {
                     <li>
                       <Link
                         to="/login"
-                        className="flex items-center gap-2 hover:opacity-80 transition-colors"
+                        className="flex items-center gap-4 hover:opacity-80 transition-colors"
                       >
                         <LogInIcon className="w-5 h-5" /> Login
                       </Link>
@@ -110,7 +121,7 @@ const Navbar = () => {
                     <li>
                       <Link
                         to="/register"
-                        className="flex items-center gap-2 hover:opacity-80 transition-colors"
+                        className="flex items-center gap-4 hover:opacity-80 transition-colors"
                       >
                         <UserRoundPlusIcon className="w-5 h-5" /> Register
                       </Link>

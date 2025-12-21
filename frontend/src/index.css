@@ -6,6 +6,18 @@
 /* Prevent DarkReader from overriding styles */
 html {
   color-scheme: light dark;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+#root {
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Protect DaisyUI theme variables from DarkReader */
@@ -15,9 +27,6 @@ html {
 }
 
 /* Force specific color values that DarkReader respects less */
-body {
-  color-scheme: light dark;
-}
 
 /* Comprehensive protection for DaisyUI classes used across components */
 

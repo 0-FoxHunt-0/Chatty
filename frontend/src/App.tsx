@@ -34,24 +34,26 @@ const App = () => {
     );
 
   return (
-    <div>
+    <div className="h-full flex flex-col overflow-hidden">
       <Navbar />
-      <Routes>
-        <Route path="/" element={user ? <Home /> : <Navigate to="/login" />} />
-        <Route
-          path="/login"
-          element={!user ? <Login /> : <Navigate to="/" />}
-        />
-        <Route
-          path="/register"
-          element={!user ? <Register /> : <Navigate to="/" />}
-        />
-        <Route path="/settings" element={<Settings />} />
-        <Route
-          path="/profile"
-          element={user ? <Profile /> : <Navigate to="/login" />}
-        />
-      </Routes>
+      <div className="flex-1 overflow-hidden">
+        <Routes>
+          <Route path="/" element={user ? <Home /> : <Navigate to="/login" />} />
+          <Route
+            path="/login"
+            element={!user ? <Login /> : <Navigate to="/" />}
+          />
+          <Route
+            path="/register"
+            element={!user ? <Register /> : <Navigate to="/" />}
+          />
+          <Route path="/settings" element={<Settings />} />
+          <Route
+            path="/profile"
+            element={user ? <Profile /> : <Navigate to="/login" />}
+          />
+        </Routes>
+      </div>
 
       <Toaster />
     </div>

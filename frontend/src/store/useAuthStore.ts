@@ -30,6 +30,7 @@ interface IAuthStore {
     bio?: string;
     profilePicture?: string;
   }) => Promise<void>;
+  onlineUsers: string[];
 }
 
 // Cache key and expiration time (23 hours to have buffer before token expires)
@@ -248,4 +249,5 @@ export const useAuthStore = create<IAuthStore>((set) => ({
       showToast.error("Failed to update profile");
     }
   },
+  onlineUsers: [],
 }));
