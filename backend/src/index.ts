@@ -47,6 +47,11 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check route
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 // API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
@@ -77,17 +82,21 @@ if (fs.existsSync(frontendPath)) {
   console.log(`✓ Frontend build directory found at: ${frontendPath}`);
   console.log(`Contents:`, fs.readdirSync(frontendPath));
 
-  app.use(express.static(frontendPath));
+  // Serve static files (CSS, JS, images, etc.)
+  app.use(express.static(frontendPath, { index: false })); // index: false prevents serving index.html for root
 
   // Catch all handler: send back React's index.html file for client-side routing
   // This must be last to catch all non-API routes
-  app.use((req, res, next) => {
-    // Skip API routes
+  app.get("*", (req, res, next) => {
+    // Skip API routes - let them be handled by API route handlers above
     if (req.path.startsWith("/api")) {
       return next();
     }
-    // For all other routes, serve the React app
+
+    // For all other routes, serve the React app's index.html
     const indexPath = path.join(frontendPath, "index.html");
+    console.log(`Serving index.html for route: ${req.path}`);
+
     if (!fs.existsSync(indexPath)) {
       console.error(`ERROR: index.html not found at: ${indexPath}`);
       return res
@@ -96,10 +105,11 @@ if (fs.existsSync(frontendPath)) {
           "Frontend build not found. Please ensure the frontend has been built."
         );
     }
-    res.sendFile(indexPath, (err) => {
+
+    res.sendFile(path.resolve(indexPath), (err) => {
       if (err) {
-        console.error(`Error sending index.html:`, err);
-        next(err);
+        console.error(`Error sending index.html for ${req.path}:`, err);
+        res.status(500).send("Error serving frontend");
       }
     });
   });
@@ -108,18 +118,18 @@ if (fs.existsSync(frontendPath)) {
   console.warn(
     `⚠ Static file serving disabled. This is normal in development mode.`
   );
-  // In development, you might want to serve a message or redirect
-  if (!isProduction) {
-    app.get("*", (req, res) => {
-      if (!req.path.startsWith("/api")) {
-        res
-          .status(404)
-          .send(
-            "Frontend not built. Run 'npm run build:frontend' in development."
-          );
-      }
-    });
-  }
+
+  // Add a catch-all for non-API routes when frontend isn't built
+  app.get("*", (req, res, next) => {
+    if (req.path.startsWith("/api")) {
+      return next();
+    }
+    res
+      .status(404)
+      .send(
+        "Frontend not built. Please ensure the frontend has been built before deployment."
+      );
+  });
 }
 
 const PORT = process.env.PORT || 5001;
