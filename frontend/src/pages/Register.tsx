@@ -13,6 +13,7 @@ import { showToast } from "../lib/toast";
 import { useAuthStore } from "../store/useAuthStore";
 import { Link, useNavigate } from "react-router-dom";
 import AuthImagePattern from "../components/AuthImagePattern";
+import { generateAndUploadAvatar } from "../lib/avatar";
 
 interface FormData {
   fullName: string;
@@ -22,7 +23,7 @@ interface FormData {
 
 const Register = () => {
   const navigate = useNavigate();
-  const { signup, isLoading, user, error } = useAuthStore();
+  const { signup, isLoading, user, error, updateProfile } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -37,13 +38,24 @@ const Register = () => {
     },
   });
 
-  // Navigate to home after successful registration
+  // Navigate to home after successful registration and avatar generation
   useEffect(() => {
     if (user) {
+      // Generate and upload avatar after successful signup
+      generateAndUploadAvatar(
+        user.fullName,
+        user.email,
+        updateProfile,
+        user.bio
+      ).catch((error) => {
+        // Avatar generation is not critical, just log the error
+        console.error("Failed to generate avatar:", error);
+      });
+
       showToast.success("Account created successfully!");
       navigate("/");
     }
-  }, [user, navigate]);
+  }, [user, navigate, updateProfile]);
 
   // Show error toast when signup fails
   useEffect(() => {

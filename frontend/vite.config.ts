@@ -5,6 +5,11 @@ import tailwindcss from "@tailwindcss/vite";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()], // Fast Refresh is enabled by default
+  build: {
+    outDir: "dist",
+    // Ensure assets are properly referenced
+    assetsDir: "assets",
+  },
   server: {
     hmr: {
       overlay: true, // Show error overlay on screen
@@ -12,6 +17,13 @@ export default defineConfig({
     watch: {
       usePolling: true, // Enable polling for file watching (needed for WSL)
       interval: 1000, // Poll interval in milliseconds
+    },
+    // Proxy API requests to backend in development
+    proxy: {
+      "/api": {
+        target: "http://localhost:5001",
+        changeOrigin: true,
+      },
     },
   },
 });

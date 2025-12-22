@@ -8,12 +8,14 @@ import Profile from "./pages/Profile";
 import { useEffect } from "react";
 import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
+import { useChatStore } from "./store/useChatStore";
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
 
 const App = () => {
   const { initializeAuth, user, isLoading, isInitialized } = useAuthStore();
   const { initializeTheme } = useThemeStore();
+  const { initializeSocket, cleanupSocket } = useChatStore();
 
   useEffect(() => {
     // Initialize theme first
@@ -24,6 +26,22 @@ const App = () => {
       initializeAuth();
     }
   }, [initializeAuth, isInitialized, initializeTheme]);
+
+  // Initialize Socket.io when user is logged in
+  useEffect(() => {
+    if (user) {
+      // Initialize socket when user is logged in
+      initializeSocket();
+    } else {
+      // Cleanup socket when user logs out
+      cleanupSocket();
+    }
+
+    // Cleanup on unmount
+    return () => {
+      cleanupSocket();
+    };
+  }, [user, initializeSocket, cleanupSocket]);
 
   // Show loading until initialization is complete
   if (!isInitialized || (isLoading && !user))
@@ -38,7 +56,10 @@ const App = () => {
       <Navbar />
       <div className="flex-1 overflow-hidden">
         <Routes>
-          <Route path="/" element={user ? <Home /> : <Navigate to="/login" />} />
+          <Route
+            path="/"
+            element={user ? <Home /> : <Navigate to="/login" />}
+          />
           <Route
             path="/login"
             element={!user ? <Login /> : <Navigate to="/" />}

@@ -31,6 +31,9 @@ interface IAuthStore {
     profilePicture?: string;
   }) => Promise<void>;
   onlineUsers: string[];
+  addOnlineUser: (userId: string) => void;
+  removeOnlineUser: (userId: string) => void;
+  setOnlineUsers: (userIds: string[]) => void;
 }
 
 // Cache key and expiration time (23 hours to have buffer before token expires)
@@ -202,7 +205,8 @@ export const useAuthStore = create<IAuthStore>((set) => ({
       // Clear cache on logout
       clearCachedUser();
 
-      set({ user: null, isLoading: false });
+      // Clear online users list on logout
+      set({ user: null, onlineUsers: [], isLoading: false });
       showToast.success(response.data.message);
     } catch (error) {
       set({ error: (error as Error).message, isLoading: false });
@@ -250,4 +254,23 @@ export const useAuthStore = create<IAuthStore>((set) => ({
     }
   },
   onlineUsers: [],
+  addOnlineUser: (userId: string) => {
+    set((state) => {
+      // Don't add if already in the list
+      if (state.onlineUsers.includes(userId)) {
+        return state;
+      }
+      return {
+        onlineUsers: [...state.onlineUsers, userId],
+      };
+    });
+  },
+  removeOnlineUser: (userId: string) => {
+    set((state) => ({
+      onlineUsers: state.onlineUsers.filter((id) => id !== userId),
+    }));
+  },
+  setOnlineUsers: (userIds: string[]) => {
+    set({ onlineUsers: userIds });
+  },
 }));

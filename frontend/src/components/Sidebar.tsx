@@ -9,7 +9,7 @@ const Sidebar = () => {
   const { users, areUsersLoading, getUsers, selectedUser, setSelectedUser } =
     useChatStore();
 
-  const { onlineUsers } = useAuthStore();
+  const { onlineUsers, user } = useAuthStore();
 
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
 
@@ -37,10 +37,6 @@ const Sidebar = () => {
           <Users className="size-6" />
           <span className="font-medium hidden lg:block">Contacts</span>
         </div>
-        {/* Empty State Message - Shown when no users match the filter */}
-        {filteredUsers.length === 0 && (
-          <div className="text-center text-zinc-500 py-4">No online users</div>
-        )}
         {/* Filter Toggle Section - Checkbox to show only online users */}
         <div className="mt-3 hidden lg:flex items-center gap-2">
           <label className="cursor-pointer flex items-center gap-2">
@@ -52,15 +48,19 @@ const Sidebar = () => {
             />
             <span className="text-sm">Show online only</span>
           </label>
-          {/* Online Count Badge - Shows number of online users */}
+          {/* Online Count Badge - Shows number of online users (excluding current user) */}
           <span className="text-xs text-zinc-500">
-            ({onlineUsers.length - 1} online)
+            ({Math.max(0, onlineUsers.filter((id) => id !== user?._id).length)} online)
           </span>
         </div>
       </div>
 
       {/* Scrollable User List Container */}
       <div className="overflow-y-auto w-full py-3">
+        {/* Empty State Message - Shown when no users match the filter */}
+        {filteredUsers.length === 0 && (
+          <div className="text-center text-zinc-500 py-4">No online users</div>
+        )}
         {filteredUsers.map((user) => (
           // Individual User Button - Clickable user item with hover and selected states
           <button
