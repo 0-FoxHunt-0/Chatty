@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useChatStore } from "../store/useChatStore";
 import { Image, Send, X } from "lucide-react";
@@ -11,7 +11,9 @@ interface MessageFormData {
 
 const MessageInput = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { selectedUser, sendMessage, addMessage } = useChatStore();
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { selectedUser, sendMessage, emitTypingStart, emitTypingStop } =
+    useChatStore();
   const {
     register,
     handleSubmit,
@@ -49,6 +51,36 @@ const MessageInput = () => {
     }
   };
 
+  // Handle typing indicators
+  const handleTyping = () => {
+    if (!selectedUser?._id) return;
+
+    // Emit typing start
+    emitTypingStart(selectedUser._id);
+
+    // Clear existing timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Stop typing after 2 seconds of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      emitTypingStop(selectedUser._id);
+    }, 2000);
+  };
+
+  // Cleanup typing timeout on unmount or when selected user changes
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      if (selectedUser?._id) {
+        emitTypingStop(selectedUser._id);
+      }
+    };
+  }, [selectedUser?._id, emitTypingStop]);
+
   const onSubmit = async (data: MessageFormData) => {
     if (!data.text.trim() && !data.image) return;
 
@@ -65,16 +97,24 @@ const MessageInput = () => {
         });
       }
 
-      const response = await sendMessage(
-        { text: data.text, image: imageBase64 },
-        selectedUser
-      );
-      if (response) {
-        addMessage(response);
+      // Stop typing indicator when message is sent
+      if (selectedUser?._id) {
+        emitTypingStop(selectedUser._id);
       }
+
+      // Clear typing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      // sendMessage now uses Socket.io and will automatically add the message
+      // via the socket event listener, so we don't need to manually add it
+      await sendMessage({ text: data.text, image: imageBase64 }, selectedUser);
+
       reset();
     } catch (error) {
       console.error("Failed to send message", error);
+      showToast.error("Failed to send message");
     }
   };
 
@@ -109,7 +149,9 @@ const MessageInput = () => {
             type="text"
             className="w-full input input-bordered rounded-lg input-sm sm:input-md"
             placeholder="Type a message..."
-            {...register("text")}
+            {...register("text", {
+              onChange: handleTyping,
+            })}
           />
           <input
             type="file"

@@ -3,12 +3,13 @@ import { useChatStore } from "../store/useChatStore";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
+import TypingIndicator from "./TypingIndicator";
 import { useAuthStore } from "../store/useAuthStore";
 import avatarImage from "../assets/avatar.jpg";
 import { formatLocalTime } from "../lib/utils";
 
 const ChatContainer = () => {
-  const { selectedUser, messages, areMessagesLoading, getMessages } =
+  const { selectedUser, messages, areMessagesLoading, getMessages, isTyping } =
     useChatStore();
   const { user } = useAuthStore();
 
@@ -97,6 +98,8 @@ const ChatContainer = () => {
             </div>
           </div>
         ))}
+        {/* Typing Indicator */}
+        {isTyping && <TypingIndicator />}
       </div>
 
       <MessageInput />
