@@ -8,6 +8,7 @@ import messageRoutes from "./routes/message.route";
 import cors from "cors";
 import { initializeSocket } from "./lib/socket";
 import path from "path";
+import fs from "fs";
 
 dotenv.config();
 
@@ -48,7 +49,33 @@ app.use("/api/messages", messageRoutes);
 
 // Serve static files from frontend build in production
 if (isProduction) {
-  const frontendPath = path.join(__dirname, "../../frontend/dist");
+  // Try multiple path resolution strategies
+  // Strategy 1: From __dirname (when running from dist folder)
+  // __dirname will be backend/dist in compiled code
+  let frontendPath = path.resolve(__dirname, "../../frontend/dist");
+  
+  // Strategy 2: From process.cwd() (working directory, should be backend folder on Render)
+  if (!fs.existsSync(frontendPath)) {
+    frontendPath = path.resolve(process.cwd(), "../frontend/dist");
+  }
+  
+  // Strategy 3: Absolute from project root (if cwd is already project root)
+  if (!fs.existsSync(frontendPath)) {
+    frontendPath = path.resolve(process.cwd(), "frontend/dist");
+  }
+
+  console.log(`Current working directory: ${process.cwd()}`);
+  console.log(`__dirname: ${__dirname}`);
+  console.log(`Attempting to serve static files from: ${frontendPath}`);
+  
+  // Check if the directory exists
+  if (!fs.existsSync(frontendPath)) {
+    console.error(`ERROR: Frontend build directory not found at: ${frontendPath}`);
+    console.error(`Please ensure the frontend has been built before starting the server.`);
+  } else {
+    console.log(`✓ Frontend build directory found at: ${frontendPath}`);
+    console.log(`Contents:`, fs.readdirSync(frontendPath));
+  }
 
   app.use(express.static(frontendPath));
 
@@ -60,8 +87,14 @@ if (isProduction) {
       return next();
     }
     // For all other routes, serve the React app
-    res.sendFile(path.join(frontendPath, "index.html"), (err) => {
+    const indexPath = path.join(frontendPath, "index.html");
+    if (!fs.existsSync(indexPath)) {
+      console.error(`ERROR: index.html not found at: ${indexPath}`);
+      return res.status(404).send("Frontend build not found. Please ensure the frontend has been built.");
+    }
+    res.sendFile(indexPath, (err) => {
       if (err) {
+        console.error(`Error sending index.html:`, err);
         next(err);
       }
     });
