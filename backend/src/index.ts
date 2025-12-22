@@ -15,6 +15,11 @@ dotenv.config();
 const app = express();
 const httpServer = createServer(app);
 
+// Health check route - register FIRST before any middleware
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
 // Initialize Socket.io
 initializeSocket(httpServer);
 
@@ -45,11 +50,6 @@ app.use(cookieParser());
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
-});
-
-// Health check route
-app.get("/health", (req, res) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
 // API routes
@@ -88,8 +88,8 @@ if (fs.existsSync(frontendPath)) {
   // Catch all handler: send back React's index.html file for client-side routing
   // This must be last to catch all non-API routes
   app.get("*", (req, res, next) => {
-    // Skip API routes - let them be handled by API route handlers above
-    if (req.path.startsWith("/api")) {
+    // Skip API routes and health check - let them be handled by route handlers above
+    if (req.path.startsWith("/api") || req.path === "/health") {
       return next();
     }
 
@@ -121,7 +121,8 @@ if (fs.existsSync(frontendPath)) {
 
   // Add a catch-all for non-API routes when frontend isn't built
   app.get("*", (req, res, next) => {
-    if (req.path.startsWith("/api")) {
+    // Skip API routes and health check
+    if (req.path.startsWith("/api") || req.path === "/health") {
       return next();
     }
     res
@@ -134,7 +135,34 @@ if (fs.existsSync(frontendPath)) {
 
 const PORT = process.env.PORT || 5001;
 
+// Add error handler for unhandled routes
+app.use((req, res) => {
+  console.log(`Unhandled route: ${req.method} ${req.path}`);
+  res.status(404).json({ error: "Route not found", path: req.path });
+});
+
 httpServer.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  console.log(`Health check available at: http://localhost:${PORT}/health`);
   connectDB();
+});
+
+// Handle server errors
+httpServer.on("error", (err: NodeJS.ErrnoException) => {
+  console.error("Server error:", err);
+  if (err.code === "EADDRINUSE") {
+    console.error(`Port ${PORT} is already in use`);
+  }
+  process.exit(1);
+});
+
+// Handle uncaught errors
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught Exception:", err);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  process.exit(1);
 });
