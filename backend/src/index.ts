@@ -87,7 +87,8 @@ if (fs.existsSync(frontendPath)) {
 
   // Catch all handler: send back React's index.html file for client-side routing
   // This must be last to catch all non-API routes
-  app.get("*", (req, res, next) => {
+  // Express 5 requires named wildcard parameter syntax
+  app.get("/{*splat}", (req, res, next) => {
     // Skip API routes and health check - let them be handled by route handlers above
     if (req.path.startsWith("/api") || req.path === "/health") {
       return next();
@@ -120,7 +121,8 @@ if (fs.existsSync(frontendPath)) {
   );
 
   // Add a catch-all for non-API routes when frontend isn't built
-  app.get("*", (req, res, next) => {
+  // Express 5 requires named wildcard parameter syntax
+  app.get("/{*splat}", (req, res, next) => {
     // Skip API routes and health check
     if (req.path.startsWith("/api") || req.path === "/health") {
       return next();
