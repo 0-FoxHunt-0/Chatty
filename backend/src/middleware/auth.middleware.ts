@@ -16,9 +16,6 @@ export const protectRoute = async (
   res: Response,
   next: NextFunction
 ) => {
-  console.log("Cookies:", req.cookies);
-  console.log("Authorization header:", req.headers.authorization);
-
   const token = req.cookies.jwt;
   if (!token) {
     return res.status(401).json({
