@@ -1,16 +1,26 @@
 import Navbar from "./components/Navbar";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
+import PageNotFound from "./pages/PageNotFound";
 import { useEffect } from "react";
 import { useAuthStore } from "./store/useAuthStore";
 import { useThemeStore } from "./store/useThemeStore";
 import { useChatStore } from "./store/useChatStore";
 import { Loader } from "lucide-react";
 import { Toaster } from "react-hot-toast";
+
+const MainLayout = () => (
+  <>
+    <Navbar />
+    <div className="flex-1 overflow-hidden">
+      <Outlet />
+    </div>
+  </>
+);
 
 const App = () => {
   const { initializeAuth, user, isLoading, isInitialized } = useAuthStore();
@@ -53,9 +63,9 @@ const App = () => {
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
-      <Navbar />
-      <div className="flex-1 overflow-hidden">
-        <Routes>
+      <Routes>
+        {/* Routes with Navbar */}
+        <Route element={<MainLayout />}>
           <Route
             path="/"
             element={user ? <Home /> : <Navigate to="/login" />}
@@ -73,8 +83,11 @@ const App = () => {
             path="/profile"
             element={user ? <Profile /> : <Navigate to="/login" />}
           />
-        </Routes>
-      </div>
+        </Route>
+
+        {/* 404 without Navbar */}
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
 
       <Toaster />
     </div>
