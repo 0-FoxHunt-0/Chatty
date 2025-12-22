@@ -22,6 +22,10 @@ initializeSocket(httpServer);
 const isProduction = process.env.NODE_ENV === "production";
 const frontendUrl = process.env.FRONTEND_URL;
 
+// Log environment info for debugging
+console.log(`NODE_ENV: ${process.env.NODE_ENV || "not set"}`);
+console.log(`isProduction: ${isProduction}`);
+
 // If FRONTEND_URL is set, use it (for separate frontend/backend deployment)
 // Otherwise, in production with same origin, CORS not needed
 if (frontendUrl || !isProduction) {
@@ -47,35 +51,31 @@ app.use((req, res, next) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/messages", messageRoutes);
 
-// Serve static files from frontend build in production
-if (isProduction) {
-  // Try multiple path resolution strategies
-  // Strategy 1: From __dirname (when running from dist folder)
-  // __dirname will be backend/dist in compiled code
-  let frontendPath = path.resolve(__dirname, "../../frontend/dist");
-  
-  // Strategy 2: From process.cwd() (working directory, should be backend folder on Render)
-  if (!fs.existsSync(frontendPath)) {
-    frontendPath = path.resolve(process.cwd(), "../frontend/dist");
-  }
-  
-  // Strategy 3: Absolute from project root (if cwd is already project root)
-  if (!fs.existsSync(frontendPath)) {
-    frontendPath = path.resolve(process.cwd(), "frontend/dist");
-  }
+// Serve static files from frontend build
+// Try to find and serve frontend dist folder (works in production or when frontend is built)
+// Try multiple path resolution strategies
+// Strategy 1: From __dirname (when running from dist folder)
+// __dirname will be backend/dist in compiled code
+let frontendPath = path.resolve(__dirname, "../../frontend/dist");
 
-  console.log(`Current working directory: ${process.cwd()}`);
-  console.log(`__dirname: ${__dirname}`);
-  console.log(`Attempting to serve static files from: ${frontendPath}`);
-  
-  // Check if the directory exists
-  if (!fs.existsSync(frontendPath)) {
-    console.error(`ERROR: Frontend build directory not found at: ${frontendPath}`);
-    console.error(`Please ensure the frontend has been built before starting the server.`);
-  } else {
-    console.log(`✓ Frontend build directory found at: ${frontendPath}`);
-    console.log(`Contents:`, fs.readdirSync(frontendPath));
-  }
+// Strategy 2: From process.cwd() (working directory, should be backend folder on Render)
+if (!fs.existsSync(frontendPath)) {
+  frontendPath = path.resolve(process.cwd(), "../frontend/dist");
+}
+
+// Strategy 3: Absolute from project root (if cwd is already project root)
+if (!fs.existsSync(frontendPath)) {
+  frontendPath = path.resolve(process.cwd(), "frontend/dist");
+}
+
+console.log(`Current working directory: ${process.cwd()}`);
+console.log(`__dirname: ${__dirname}`);
+console.log(`Attempting to serve static files from: ${frontendPath}`);
+
+// Check if the directory exists and serve static files
+if (fs.existsSync(frontendPath)) {
+  console.log(`✓ Frontend build directory found at: ${frontendPath}`);
+  console.log(`Contents:`, fs.readdirSync(frontendPath));
 
   app.use(express.static(frontendPath));
 
@@ -90,7 +90,11 @@ if (isProduction) {
     const indexPath = path.join(frontendPath, "index.html");
     if (!fs.existsSync(indexPath)) {
       console.error(`ERROR: index.html not found at: ${indexPath}`);
-      return res.status(404).send("Frontend build not found. Please ensure the frontend has been built.");
+      return res
+        .status(404)
+        .send(
+          "Frontend build not found. Please ensure the frontend has been built."
+        );
     }
     res.sendFile(indexPath, (err) => {
       if (err) {
@@ -99,6 +103,23 @@ if (isProduction) {
       }
     });
   });
+} else {
+  console.warn(`⚠ Frontend build directory not found at: ${frontendPath}`);
+  console.warn(
+    `⚠ Static file serving disabled. This is normal in development mode.`
+  );
+  // In development, you might want to serve a message or redirect
+  if (!isProduction) {
+    app.get("*", (req, res) => {
+      if (!req.path.startsWith("/api")) {
+        res
+          .status(404)
+          .send(
+            "Frontend not built. Run 'npm run build:frontend' in development."
+          );
+      }
+    });
+  }
 }
 
 const PORT = process.env.PORT || 5001;
