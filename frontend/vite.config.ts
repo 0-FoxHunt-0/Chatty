@@ -10,6 +10,12 @@ export default defineConfig({
     // Ensure assets are properly referenced
     assetsDir: "assets",
   },
+  resolve: {
+    dedupe: ["react", "react-dom"],
+  },
+  optimizeDeps: {
+    include: ["react", "react-dom"],
+  },
   server: {
     hmr: {
       overlay: true, // Show error overlay on screen

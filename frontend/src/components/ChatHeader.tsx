@@ -1,10 +1,9 @@
 import { useChatStore } from "../store/useChatStore";
 import avatarImage from "../assets/avatar.jpg";
 import { useAuthStore } from "../store/useAuthStore";
-import { X } from "lucide-react";
 
 const ChatHeader = () => {
-  const { selectedUser, setSelectedUser } = useChatStore();
+  const { selectedUser } = useChatStore();
   const { onlineUsers } = useAuthStore();
 
   return (
@@ -29,10 +28,6 @@ const ChatHeader = () => {
           </p>
         </div>
       </div>
-      {/* Close button */}
-      <button onClick={() => setSelectedUser(null)}>
-        <X />
-      </button>
     </div>
   );
 };
