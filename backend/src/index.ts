@@ -83,14 +83,31 @@ if (isProduction) {
     console.log(`✓ Frontend build directory found at: ${frontendPath}`);
     console.log(`Contents:`, fs.readdirSync(frontendPath));
 
-    // Serve static files (CSS, JS, images, etc.)
-    app.use(express.static(frontendPath, { index: false })); // index: false prevents serving index.html for root
+    // Serve static files (CSS, JS, images, favicons, etc.)
+    // Set maxAge for caching static assets
+    app.use(
+      express.static(frontendPath, {
+        index: false, // index: false prevents serving index.html for root
+        maxAge: "1y", // Cache static assets for 1 year
+        etag: true, // Enable ETag for better caching
+      })
+    );
+
+    // Explicitly handle favicon requests to ensure they're served correctly
+    const faviconPath = path.join(frontendPath, "favicon.ico");
+    if (fs.existsSync(faviconPath)) {
+      app.get("/favicon.ico", (req, res) => {
+        res.sendFile(path.resolve(faviconPath));
+      });
+    }
 
     // Catch all handler: send back React's index.html file for client-side routing
     // This must be last to catch all non-API routes
     // Express 5 requires named wildcard parameter syntax
+    // Note: express.static middleware above will handle static files first
     app.get("/{*splat}", (req, res, next) => {
       // Skip API routes and health check - let them be handled by route handlers above
+      // Static files are handled by express.static middleware, which calls next() if file not found
       if (req.path.startsWith("/api") || req.path === "/health") {
         return next();
       }
