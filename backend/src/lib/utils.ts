@@ -10,7 +10,9 @@ const generateToken = (id: string, res: Response) => {
   });
   res.cookie("jwt", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV !== "development",
+    // Only require Secure cookies in production (HTTPS).
+    // In local dev, Secure cookies on http://localhost will be dropped by the browser.
+    secure: process.env.NODE_ENV === "production",
     maxAge: 1000 * 60 * 60 * 24,
     sameSite: "strict",
   });

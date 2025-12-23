@@ -4,7 +4,7 @@
   "description": "",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "nodemon --exec ts-node src/index.ts",
+    "dev": "NODE_ENV=development nodemon --exec ts-node src/index.ts",
     "build": "npm install --include=dev && npm run build:frontend && tsc",
     "build:frontend": "cd ../frontend && npm install --include=dev && npm run build",
     "start": "NODE_ENV=production node dist/index.js"

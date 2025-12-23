@@ -44,22 +44,62 @@ export const useChatStore = create<IChatStore>((set, get) => ({
   initializeSocket: (token?: string) => {
     const socket = getSocket(token);
 
-    // Listen for new messages
+    // Ensure auth token (if provided) is used for the next (re)connect.
+    if (token) {
+      socket.auth = { token };
+    }
+
+    // Diagnostics (safe to leave; logs only connection state, not secrets)
+    socket.off("connect");
+    socket.off("disconnect");
+    socket.off("reconnect_attempt");
+    socket.off("reconnect_failed");
+
+    socket.on("connect", () => {
+      console.log("[socket] connected", {
+        id: socket.id,
+        transport: socket.io.engine.transport.name,
+      });
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.warn("[socket] disconnected", {
+        reason,
+        wasConnected: socket.connected,
+      });
+    });
+
+    socket.io.on("reconnect_attempt", (attempt: number) => {
+      console.log("[socket] reconnect_attempt", { attempt });
+    });
+
+    socket.io.on("reconnect_failed", () => {
+      console.warn("[socket] reconnect_failed");
+    });
+
+    // Avoid duplicate listeners by clearing only the events we own.
+    socket.off("new-message");
+    socket.off("message-sent");
+    socket.off("message-error");
+    socket.off("online-users-list");
+    socket.off("user-online");
+    socket.off("user-offline");
+    socket.off("user-typing");
+    socket.off("user-stopped-typing");
+    socket.off("connect_error");
+
+    // Attach listeners BEFORE connecting so we can't miss early server emits (like online-users-list).
     socket.on("new-message", (message: IMessage) => {
       const { selectedUser } = get();
-      // Handle both string IDs and populated object IDs
       const messageSenderId =
         typeof message.senderId === "object"
           ? (message.senderId as { _id: string })._id
           : message.senderId;
 
-      // Only add message if it's from the currently selected user
       if (selectedUser && messageSenderId === selectedUser._id) {
         set((state) => {
-          // Check if message already exists to avoid duplicates
           const exists = state.messages.some((m) => m._id === message._id);
           if (!exists) {
-            // Normalize senderId and receiverId from populated objects to strings
             const normalizedMessage: IMessage = {
               ...message,
               senderId: messageSenderId,
@@ -75,13 +115,10 @@ export const useChatStore = create<IChatStore>((set, get) => ({
       }
     });
 
-    // Listen for message sent confirmation
     socket.on("message-sent", (message: IMessage) => {
       set((state) => {
-        // Check if message already exists to avoid duplicates
         const exists = state.messages.some((m) => m._id === message._id);
         if (!exists) {
-          // Normalize senderId and receiverId from populated objects to strings
           const normalizedMessage: IMessage = {
             ...message,
             senderId:
@@ -99,34 +136,27 @@ export const useChatStore = create<IChatStore>((set, get) => ({
       });
     });
 
-    // Listen for message errors
     socket.on("message-error", (data: { error: string }) => {
       showToast.error(data.error || "Failed to send message");
     });
 
-    // Listen for initial online users list (sent when connecting)
     socket.on("online-users-list", (userIds: string[]) => {
-      // Set the complete list of online users
-      const authStore = useAuthStore.getState();
-      // Clear and set all online users at once
-      authStore.setOnlineUsers(userIds);
+      console.log("[socket] online-users-list", { count: userIds.length });
+      useAuthStore.getState().setOnlineUsers(userIds);
     });
 
-    // Listen for online/offline status
     socket.on("user-online", (userId: string) => {
-      // Update online users in auth store
+      console.log("[socket] user-online", { userId });
       useAuthStore.getState().addOnlineUser(userId);
     });
 
     socket.on("user-offline", (userId: string) => {
-      // Remove from online users in auth store
+      console.log("[socket] user-offline", { userId });
       useAuthStore.getState().removeOnlineUser(userId);
     });
 
-    // Listen for typing indicators
     socket.on("user-typing", (data: { userId: string }) => {
       const { selectedUser } = get();
-      // Only show typing indicator if it's from the currently selected user
       if (selectedUser && data.userId === selectedUser._id) {
         set({ isTyping: true });
       }
@@ -134,11 +164,22 @@ export const useChatStore = create<IChatStore>((set, get) => ({
 
     socket.on("user-stopped-typing", (data: { userId: string }) => {
       const { selectedUser } = get();
-      // Only hide typing indicator if it's from the currently selected user
       if (selectedUser && data.userId === selectedUser._id) {
         set({ isTyping: false });
       }
     });
+
+    socket.on("connect_error", (error) => {
+      console.error("Socket connection error:", error);
+      if (error.message?.includes("Authentication")) {
+        showToast.error("Authentication failed. Please log in again.");
+      }
+    });
+
+    // Now connect (socket is created with autoConnect:false).
+    if (!socket.connected) {
+      socket.connect();
+    }
 
     set({ socket });
   },
