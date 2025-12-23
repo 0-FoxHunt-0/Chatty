@@ -4,6 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: "/", // Explicitly set base path for deployment
   plugins: [react(), tailwindcss()], // Fast Refresh is enabled by default
   build: {
     outDir: "dist",
