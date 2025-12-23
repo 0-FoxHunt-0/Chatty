@@ -33,6 +33,8 @@ interface IChatStore {
   setIsTyping: (isTyping: boolean) => void;
   emitTypingStart: (receiverId: string) => void;
   emitTypingStop: (receiverId: string) => void;
+  isUserInfoVisible: boolean;
+  setUserInfoVisible: (visible: boolean) => void;
 }
 
 export const useChatStore = create<IChatStore>((set, get) => ({
@@ -57,7 +59,16 @@ export const useChatStore = create<IChatStore>((set, get) => ({
           // Check if message already exists to avoid duplicates
           const exists = state.messages.some((m) => m._id === message._id);
           if (!exists) {
-            return { messages: [...state.messages, message] };
+            // Normalize senderId and receiverId from populated objects to strings
+            const normalizedMessage: IMessage = {
+              ...message,
+              senderId: messageSenderId,
+              receiverId:
+                typeof message.receiverId === "object"
+                  ? (message.receiverId as { _id: string })._id
+                  : message.receiverId,
+            };
+            return { messages: [...state.messages, normalizedMessage] };
           }
           return state;
         });
@@ -70,7 +81,19 @@ export const useChatStore = create<IChatStore>((set, get) => ({
         // Check if message already exists to avoid duplicates
         const exists = state.messages.some((m) => m._id === message._id);
         if (!exists) {
-          return { messages: [...state.messages, message] };
+          // Normalize senderId and receiverId from populated objects to strings
+          const normalizedMessage: IMessage = {
+            ...message,
+            senderId:
+              typeof message.senderId === "object"
+                ? (message.senderId as { _id: string })._id
+                : message.senderId,
+            receiverId:
+              typeof message.receiverId === "object"
+                ? (message.receiverId as { _id: string })._id
+                : message.receiverId,
+          };
+          return { messages: [...state.messages, normalizedMessage] };
         }
         return state;
       });
@@ -150,10 +173,16 @@ export const useChatStore = create<IChatStore>((set, get) => ({
 
   sendMessage: async (message: SendMessagePayload, selectedUser: IUser) => {
     const { socket } = get();
+    const currentUser = useAuthStore.getState().user;
 
     if (!socket || !socket.connected) {
       showToast.error("Not connected to server");
       throw new Error("Socket not connected");
+    }
+
+    if (!currentUser) {
+      showToast.error("User not authenticated");
+      throw new Error("User not authenticated");
     }
 
     try {
@@ -167,7 +196,7 @@ export const useChatStore = create<IChatStore>((set, get) => ({
       // Return a temporary message object (will be replaced by server response)
       const tempMessage: IMessage = {
         _id: `temp-${Date.now()}`,
-        senderId: get().selectedUser?._id || "",
+        senderId: currentUser._id,
         receiverId: selectedUser._id,
         text: message.text,
         image: message.image,
@@ -205,7 +234,11 @@ export const useChatStore = create<IChatStore>((set, get) => ({
           : user,
       // Reset typing state when user changes
       isTyping: false,
+      // Set UserInfo visibility: true when user is selected, false when deselected
+      isUserInfoVisible: user !== null,
     })),
+  isUserInfoVisible: false,
+  setUserInfoVisible: (visible: boolean) => set({ isUserInfoVisible: visible }),
   areUsersLoading: false,
   isTyping: false,
   setIsTyping: (isTyping: boolean) => set({ isTyping }),
