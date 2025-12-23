@@ -52,8 +52,9 @@ export const useChatStore = create<IChatStore>((set, get) => ({
     // Diagnostics (safe to leave; logs only connection state, not secrets)
     socket.off("connect");
     socket.off("disconnect");
-    socket.off("reconnect_attempt");
-    socket.off("reconnect_failed");
+    socket.io.off("reconnect_attempt");
+    socket.io.off("reconnect_failed");
+    socket.io.off("reconnect");
 
     socket.on("connect", () => {
       console.log("[socket] connected", {
@@ -75,6 +76,14 @@ export const useChatStore = create<IChatStore>((set, get) => ({
 
     socket.io.on("reconnect_failed", () => {
       console.warn("[socket] reconnect_failed");
+    });
+
+    socket.io.on("reconnect", (attempt: number) => {
+      console.log("[socket] reconnected after", {
+        attempt,
+        attempts: "attempts",
+      });
+      // Server will automatically send online-users-list on reconnect
     });
 
     // Avoid duplicate listeners by clearing only the events we own.

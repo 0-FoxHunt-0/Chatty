@@ -19,6 +19,20 @@ export const initializeSocket = (httpServer: HTTPServer) => {
         : "http://localhost:5173", // Development origin
       credentials: true,
     },
+    // Transport configuration for better compatibility with reverse proxies (Render, etc.)
+    // Allow upgrade from polling to websocket
+    transports: ["polling", "websocket"],
+    allowUpgrades: true,
+    // Increase ping timeout and interval for production stability
+    pingTimeout: 60000,
+    pingInterval: 25000,
+    // Connection state recovery for brief disconnections
+    connectionStateRecovery: {
+      // the backup duration of the sessions and the packets
+      maxDisconnectionDuration: 2 * 60 * 1000,
+      // whether to skip middlewares upon successful recovery
+      skipMiddlewares: true,
+    },
   });
 
   // Engine.IO-level connection errors (handshake / transport issues)
@@ -78,23 +92,35 @@ export const initializeSocket = (httpServer: HTTPServer) => {
     }
   });
 
-  // Store online users: userId -> socketId
-  const onlineUsers = new Map<string, string>();
+  // Store online users: userId -> Set of socketIds (user may have multiple connections)
+  const onlineUsers = new Map<string, Set<string>>();
+
+  // Helper to check if user is online (has at least one connection)
+  const isUserOnline = (userId: string): boolean => {
+    const sockets = onlineUsers.get(userId);
+    return sockets !== undefined && sockets.size > 0;
+  };
 
   io.on("connection", (socket: AuthenticatedSocket) => {
     const userId = socket.userId!;
+    const wasOnline = isUserOnline(userId);
 
-    console.log(`User connected: ${userId}`);
+    console.log(`User connected: ${userId} (socket: ${socket.id}, transport: ${socket.conn.transport.name})`);
+
+    // Track this socket for the user
+    if (!onlineUsers.has(userId)) {
+      onlineUsers.set(userId, new Set());
+    }
+    onlineUsers.get(userId)!.add(socket.id);
 
     // Send current list of online users to the newly connected client
-    const currentOnlineUsers = Array.from(onlineUsers.keys());
+    const currentOnlineUsers = Array.from(onlineUsers.keys()).filter(isUserOnline);
     socket.emit("online-users-list", currentOnlineUsers);
 
-    // Add user to online users
-    onlineUsers.set(userId, socket.id);
-
-    // Emit online status to all clients (including the newly connected one)
-    io.emit("user-online", userId);
+    // Only emit user-online if they weren't already online (handles reconnects/multiple tabs)
+    if (!wasOnline) {
+      io.emit("user-online", userId);
+    }
 
     // Join user's personal room for direct messaging
     socket.join(userId);
@@ -128,10 +154,12 @@ export const initializeSocket = (httpServer: HTTPServer) => {
             .populate("senderId", "fullName profilePicture")
             .populate("receiverId", "fullName profilePicture");
 
-          // Send to receiver if online
-          const receiverSocketId = onlineUsers.get(data.receiverId);
-          if (receiverSocketId) {
-            io.to(receiverSocketId).emit("new-message", populatedMessage);
+          // Send to receiver if online (send to all their connected sockets)
+          const receiverSockets = onlineUsers.get(data.receiverId);
+          if (receiverSockets && receiverSockets.size > 0) {
+            receiverSockets.forEach((socketId) => {
+              io.to(socketId).emit("new-message", populatedMessage);
+            });
           }
 
           // Also send back to sender for confirmation
@@ -145,24 +173,39 @@ export const initializeSocket = (httpServer: HTTPServer) => {
 
     // Handle typing indicators
     socket.on("typing-start", (data: { receiverId: string }) => {
-      const receiverSocketId = onlineUsers.get(data.receiverId);
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit("user-typing", { userId });
+      const receiverSockets = onlineUsers.get(data.receiverId);
+      if (receiverSockets && receiverSockets.size > 0) {
+        receiverSockets.forEach((socketId) => {
+          io.to(socketId).emit("user-typing", { userId });
+        });
       }
     });
 
     socket.on("typing-stop", (data: { receiverId: string }) => {
-      const receiverSocketId = onlineUsers.get(data.receiverId);
-      if (receiverSocketId) {
-        io.to(receiverSocketId).emit("user-stopped-typing", { userId });
+      const receiverSockets = onlineUsers.get(data.receiverId);
+      if (receiverSockets && receiverSockets.size > 0) {
+        receiverSockets.forEach((socketId) => {
+          io.to(socketId).emit("user-stopped-typing", { userId });
+        });
       }
     });
 
     // Handle disconnection
-    socket.on("disconnect", () => {
-      console.log(`User disconnected: ${userId}`);
-      onlineUsers.delete(userId);
-      io.emit("user-offline", userId);
+    socket.on("disconnect", (reason) => {
+      console.log(`User disconnected: ${userId} (socket: ${socket.id}, reason: ${reason})`);
+      
+      // Remove this specific socket from the user's set
+      const userSockets = onlineUsers.get(userId);
+      if (userSockets) {
+        userSockets.delete(socket.id);
+        
+        // Only emit user-offline if they have no remaining connections
+        // This handles transport upgrades, multiple tabs, and brief reconnects
+        if (userSockets.size === 0) {
+          onlineUsers.delete(userId);
+          io.emit("user-offline", userId);
+        }
+      }
     });
   });
 

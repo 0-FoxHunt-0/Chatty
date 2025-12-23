@@ -19,7 +19,15 @@ export const getSocket = (token?: string): Socket => {
       autoConnect: false,
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
+      // In production, start with polling then upgrade to websocket.
+      // This prevents the "WebSocket closed before established" error on platforms like Render
+      // where reverse proxy may interfere with immediate WebSocket connections.
+      transports: import.meta.env.PROD ? ["polling", "websocket"] : ["websocket", "polling"],
+      // Increase timeouts for production environment
+      timeout: 20000,
+      // Force new connection on reconnect to avoid stale state
+      forceNew: false,
     });
   }
   return socket;
