@@ -64,3 +64,26 @@ export const formatLocalTime = (dateString?: string): string => {
     return dateString;
   }
 };
+
+// Helper function to format member since date
+export const formatMemberSince = (dateString?: string): string => {
+  if (!dateString) return "";
+
+  try {
+    const date = new Date(dateString);
+
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      return "";
+    }
+
+    // Format as "Month Year" (e.g., "January 2024")
+    const options: Intl.DateTimeFormatOptions = {
+      month: "long",
+      year: "numeric",
+    };
+    return date.toLocaleDateString("en-US", options);
+  } catch {
+    return "";
+  }
+};
