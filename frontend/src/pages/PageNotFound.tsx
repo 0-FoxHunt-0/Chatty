@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Home } from "lucide-react";
+import illustration404 from "../assets/404.svg";
 
 function PageNotFound() {
   const navigate = useNavigate();
@@ -34,11 +35,13 @@ function PageNotFound() {
           </div>
         </div>
         <div className="relative w-full mt-12 lg:w-1/2 lg:mt-0">
-          <img
-            className="w-full max-w-lg lg:mx-auto"
-            src="/images/components/illustration.svg"
-            alt=""
-          />
+          <div className="w-full max-w-lg lg:mx-auto bg-base-100 rounded-lg">
+            <img
+              className="w-full"
+              src={illustration404}
+              alt="404 illustration"
+            />
+          </div>
         </div>
       </div>
     </section>
