@@ -21,6 +21,15 @@ export const initializeSocket = (httpServer: HTTPServer) => {
     },
   });
 
+  // Engine.IO-level connection errors (handshake / transport issues)
+  io.engine.on("connection_error", (err) => {
+    console.error("Engine.IO connection_error:", {
+      code: err.code,
+      message: err.message,
+      context: err.context,
+    });
+  });
+
   // Authentication middleware for Socket.io
   io.use(async (socket: AuthenticatedSocket, next) => {
     try {
@@ -30,6 +39,12 @@ export const initializeSocket = (httpServer: HTTPServer) => {
         socket.handshake.headers.cookie?.split("jwt=")[1]?.split(";")[0];
 
       if (!token) {
+        console.error("Socket auth failed: no token provided", {
+          origin: socket.handshake.headers.origin,
+          hasCookieHeader: Boolean(socket.handshake.headers.cookie),
+          cookieHeaderLength: socket.handshake.headers.cookie?.length || 0,
+          transport: socket.conn.transport.name,
+        });
         return next(new Error("Authentication error: No token provided"));
       }
 
@@ -41,6 +56,9 @@ export const initializeSocket = (httpServer: HTTPServer) => {
         "-password"
       );
       if (!user) {
+        console.error("Socket auth failed: user not found", {
+          userIdFromToken: decoded.id,
+        });
         return next(new Error("Authentication error: User not found"));
       }
 
@@ -50,6 +68,12 @@ export const initializeSocket = (httpServer: HTTPServer) => {
       socket.user = user;
       next();
     } catch (error) {
+      console.error("Socket auth failed: invalid token", {
+        origin: socket.handshake.headers.origin,
+        hasCookieHeader: Boolean(socket.handshake.headers.cookie),
+        cookieHeaderLength: socket.handshake.headers.cookie?.length || 0,
+        transport: socket.conn.transport.name,
+      });
       next(new Error("Authentication error: Invalid token"));
     }
   });
