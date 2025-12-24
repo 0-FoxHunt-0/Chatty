@@ -62,21 +62,23 @@ const App = () => {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <Routes>
-        {/* Routes with Navbar */}
+        {/* Routes with Navbar (exclude login/register) */}
         <Route element={<MainLayout />}>
           <Route
             path="/"
             element={user ? <Home /> : <Navigate to="/login" />}
           />
-          <Route
-            path="/login"
-            element={!user ? <Login /> : <Navigate to="/" />}
-          />
-          <Route
-            path="/register"
-            element={!user ? <Register /> : <Navigate to="/" />}
-          />
         </Route>
+
+        {/* Auth routes without Navbar */}
+        <Route
+          path="/login"
+          element={!user ? <Login /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/register"
+          element={!user ? <Register /> : <Navigate to="/" />}
+        />
 
         {/* 404 without Navbar */}
         <Route path="*" element={<PageNotFound />} />
