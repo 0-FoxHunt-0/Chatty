@@ -83,7 +83,65 @@ if (isProduction) {
     console.log(`✓ Frontend build directory found at: ${frontendPath}`);
     console.log(`Contents:`, fs.readdirSync(frontendPath));
 
-    // Serve static files (CSS, JS, images, favicons, etc.)
+    // Explicitly handle favicon and other icon requests BEFORE the catch-all route
+    // This ensures they are served with correct Content-Type headers
+    const faviconPath = path.join(frontendPath, "favicon.ico");
+    if (fs.existsSync(faviconPath)) {
+      app.get("/favicon.ico", (req, res) => {
+        res.setHeader("Content-Type", "image/x-icon");
+        res.setHeader("Cache-Control", "public, max-age=31536000"); // 1 year
+        res.sendFile(path.resolve(faviconPath));
+      });
+    }
+
+    // Handle PNG favicons
+    app.get("/favicon-:size.png", (req, res, next) => {
+      const pngPath = path.join(frontendPath, `favicon-${req.params.size}.png`);
+      if (fs.existsSync(pngPath)) {
+        res.setHeader("Content-Type", "image/png");
+        res.setHeader("Cache-Control", "public, max-age=31536000");
+        res.sendFile(path.resolve(pngPath));
+      } else {
+        next();
+      }
+    });
+
+    // Handle apple-touch-icon
+    const appleTouchPath = path.join(frontendPath, "apple-touch-icon.png");
+    if (fs.existsSync(appleTouchPath)) {
+      app.get("/apple-touch-icon.png", (req, res) => {
+        res.setHeader("Content-Type", "image/png");
+        res.setHeader("Cache-Control", "public, max-age=31536000");
+        res.sendFile(path.resolve(appleTouchPath));
+      });
+    }
+
+    // Handle web manifest
+    const manifestPath = path.join(frontendPath, "site.webmanifest");
+    if (fs.existsSync(manifestPath)) {
+      app.get("/site.webmanifest", (req, res) => {
+        res.setHeader("Content-Type", "application/manifest+json");
+        res.setHeader("Cache-Control", "public, max-age=31536000");
+        res.sendFile(path.resolve(manifestPath));
+      });
+    }
+
+    // Handle android-chrome icons (used by webmanifest)
+    app.get("/android-chrome-:size.png", (req, res, next) => {
+      const iconPath = path.join(
+        frontendPath,
+        `android-chrome-${req.params.size}.png`
+      );
+      if (fs.existsSync(iconPath)) {
+        res.setHeader("Content-Type", "image/png");
+        res.setHeader("Cache-Control", "public, max-age=31536000");
+        res.sendFile(path.resolve(iconPath));
+      } else {
+        next();
+      }
+    });
+
+    // Serve static files (CSS, JS, images, etc.)
     // Set maxAge for caching static assets
     app.use(
       express.static(frontendPath, {
@@ -92,14 +150,6 @@ if (isProduction) {
         etag: true, // Enable ETag for better caching
       })
     );
-
-    // Explicitly handle favicon requests to ensure they're served correctly
-    const faviconPath = path.join(frontendPath, "favicon.ico");
-    if (fs.existsSync(faviconPath)) {
-      app.get("/favicon.ico", (req, res) => {
-        res.sendFile(path.resolve(faviconPath));
-      });
-    }
 
     // Catch all handler: send back React's index.html file for client-side routing
     // This must be last to catch all non-API routes
