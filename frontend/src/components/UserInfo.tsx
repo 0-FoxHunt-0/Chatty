@@ -3,6 +3,7 @@ import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import avatarImage from "../assets/avatar.jpg";
 import { formatMemberSince } from "../lib/utils";
+import OnlineStatusIndicator from "./reusables/OnlineStatusIndicator";
 
 const UserInfo = () => {
   const { selectedUser, isUserInfoVisible, setUserInfoVisible } =
@@ -40,9 +41,7 @@ const UserInfo = () => {
             <div className="size-16 rounded-full">
               <img src={profilePicture} alt={selectedUser.fullName} />
             </div>
-            {isOnline && (
-              <div className="absolute bottom-0 right-0 size-4 bg-success rounded-full border-2 border-base-100"></div>
-            )}
+            <OnlineStatusIndicator isOnline={isOnline} size="md" />
           </div>
           {/* Full Name */}
           <div className="flex-1 pt-2">
