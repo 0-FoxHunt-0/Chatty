@@ -9,6 +9,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import avatarImage from "../assets/avatar.jpg";
 import { formatLocalTime } from "../lib/utils";
 import { ChevronLeft } from "lucide-react";
+import { useDeviceType } from "../lib/device";
 
 const ChatContainer = () => {
   const {
@@ -21,6 +22,9 @@ const ChatContainer = () => {
     setUserInfoVisible,
   } = useChatStore();
   const { user } = useAuthStore();
+  const deviceType = useDeviceType();
+  const isDesktop = deviceType === "desktop";
+  const isMobileOrTablet = deviceType === "mobile" || deviceType === "tablet";
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const prevMessagesLengthRef = useRef<number>(0);
@@ -29,7 +33,20 @@ const ChatContainer = () => {
   const [swipeStart, setSwipeStart] = useState<number | null>(null);
   const [swipeDistance, setSwipeDistance] = useState(0);
   const [isSwiping, setIsSwiping] = useState(false);
+  const [isLargeScreen, setIsLargeScreen] = useState(
+    () => window.innerWidth >= 1024
+  );
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Track window size for layout decisions (separate from device type)
+  useEffect(() => {
+    const handleResize = () => {
+      setIsLargeScreen(window.innerWidth >= 1024);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Helper function to get a valid profile picture URL
   const getProfilePicture = (profilePicture?: string | null): string => {
@@ -101,13 +118,13 @@ const ChatContainer = () => {
 
   // Handle swipe gestures for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (window.innerWidth >= 1024) return; // Only on mobile
+    if (isDesktop) return; // Only on mobile/tablet
     setSwipeStart(e.touches[0].clientX);
     setIsSwiping(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isSwiping || swipeStart === null || window.innerWidth >= 1024) return;
+    if (!isSwiping || swipeStart === null || isDesktop) return;
 
     const currentX = e.touches[0].clientX;
     const distance = swipeStart - currentX;
@@ -125,7 +142,7 @@ const ChatContainer = () => {
   };
 
   const handleTouchEnd = () => {
-    if (!isSwiping || window.innerWidth >= 1024) return;
+    if (!isSwiping || isDesktop) return;
 
     const threshold = 100; // Minimum swipe distance to trigger
 
@@ -145,7 +162,7 @@ const ChatContainer = () => {
 
   // Handle right edge hover for desktop
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (window.innerWidth < 1024) return; // Only on desktop
+    if (!isDesktop) return; // Only on desktop
 
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
@@ -173,14 +190,16 @@ const ChatContainer = () => {
           <MessageSkeleton />
           <MessageInput />
         </div>
-        {/* UserInfo on desktop */}
-        <div
-          className={`hidden lg:block transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
-            isUserInfoVisible ? "w-[400px]" : "w-0"
-          }`}
-        >
-          <UserInfo />
-        </div>
+        {/* UserInfo on desktop (large screens only) */}
+        {isDesktop && isLargeScreen && (
+          <div
+            className={`transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
+              isUserInfoVisible ? "w-[400px]" : "w-0"
+            }`}
+          >
+            <UserInfo />
+          </div>
+        )}
       </div>
     );
 
@@ -194,11 +213,11 @@ const ChatContainer = () => {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Desktop: Reveal button when hovering right edge */}
-      {!isUserInfoVisible && (
+      {/* Desktop: Reveal button when hovering right edge - show on desktop regardless of screen size */}
+      {!isUserInfoVisible && isDesktop && (
         <button
           onClick={() => setUserInfoVisible(true)}
-          className={`hidden lg:flex absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-base-100 rounded-l-full p-2 shadow-lg border border-base-300 border-r-0 transition-all duration-300 ease-in-out hover:bg-base-200 ${
+          className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-base-100 rounded-l-full p-2 shadow-lg border border-base-300 border-r-0 transition-all duration-300 ease-in-out hover:bg-base-200 ${
             isHoveringRightEdge
               ? "opacity-100 translate-x-0"
               : "opacity-0 translate-x-full pointer-events-none"
@@ -209,13 +228,14 @@ const ChatContainer = () => {
         </button>
       )}
 
-      {/* Mobile: Backdrop overlay when UserInfo is open */}
-      {isUserInfoVisible && (
-        <div
-          className="lg:hidden fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
-          onClick={() => setUserInfoVisible(false)}
-        />
-      )}
+      {/* Backdrop overlay when UserInfo is open (mobile/tablet always, or desktop on small screens) */}
+      {isUserInfoVisible &&
+        (isMobileOrTablet || (isDesktop && !isLargeScreen)) && (
+          <div
+            className="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300"
+            onClick={() => setUserInfoVisible(false)}
+          />
+        )}
 
       {/* Chat Container - shrinks on desktop when UserInfo is visible */}
       <div className="flex-1 flex flex-col overflow-auto transition-all duration-300 ease-in-out min-w-0">
@@ -275,7 +295,7 @@ const ChatContainer = () => {
                     <img
                       src={message.image}
                       alt="Message Image"
-                      className="max-w-sm rounded-lg"
+                      className="max-w-full sm:max-w-sm rounded-lg h-auto"
                     />
                   </div>
                 )}
@@ -291,32 +311,36 @@ const ChatContainer = () => {
         <MessageInput />
       </div>
 
-      {/* UserInfo Component - Desktop */}
-      <div
-        className={`hidden lg:block transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
-          isUserInfoVisible ? "w-[400px]" : "w-0"
-        }`}
-      >
-        <UserInfo />
-      </div>
+      {/* UserInfo Component - Desktop sidebar (desktop on large screens only) */}
+      {isDesktop && isLargeScreen && (
+        <div
+          className={`transition-all duration-300 ease-in-out overflow-hidden shrink-0 ${
+            isUserInfoVisible ? "w-[400px]" : "w-0"
+          }`}
+        >
+          <UserInfo />
+        </div>
+      )}
 
-      {/* Mobile: UserInfo as overlay */}
-      <div
-        className={`lg:hidden fixed top-0 right-0 h-full w-[85vw] max-w-sm z-50 transition-transform duration-300 ease-in-out ${
-          isUserInfoVisible ? "translate-x-0" : "translate-x-full"
-        }`}
-        style={{
-          transform: isSwiping
-            ? isUserInfoVisible
-              ? `translateX(${swipeDistance}px)`
-              : `translateX(calc(100% - ${swipeDistance}px))`
-            : isUserInfoVisible
-            ? "translateX(0)"
-            : "translateX(100%)",
-        }}
-      >
-        <UserInfo />
-      </div>
+      {/* UserInfo as overlay (mobile/tablet always, or desktop on small screens) */}
+      {(isMobileOrTablet || (isDesktop && !isLargeScreen)) && (
+        <div
+          className={`fixed top-0 right-0 h-full w-[85vw] max-w-sm z-50 transition-transform duration-300 ease-in-out ${
+            isUserInfoVisible ? "translate-x-0" : "translate-x-full"
+          }`}
+          style={{
+            transform: isSwiping
+              ? isUserInfoVisible
+                ? `translateX(${swipeDistance}px)`
+                : `translateX(calc(100% - ${swipeDistance}px))`
+              : isUserInfoVisible
+              ? "translateX(0)"
+              : "translateX(100%)",
+          }}
+        >
+          <UserInfo />
+        </div>
+      )}
     </div>
   );
 };
