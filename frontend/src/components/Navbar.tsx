@@ -4,8 +4,6 @@ import {
   LogInIcon,
   LogOutIcon,
   MessageSquare,
-  Settings,
-  UserRoundIcon,
   UserRoundPlusIcon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -76,35 +74,15 @@ const Navbar = () => {
           <div className="flex items-center gap-4">
             <ul className="flex items-center gap-4">
               {user ? (
-                <>
-                  <li>
-                    <Link
-                      to="/settings"
-                      className="flex items-center gap-4 hover:opacity-80 transition-colors"
-                    >
-                      <Settings className="w-5 h-5" />
-                      <span>Settings</span>
-                    </Link>
-                  </li>
-                  <li>
-                    <Link
-                      to="/profile"
-                      className="flex items-center gap-4 hover:opacity-80 transition-colors"
-                    >
-                      <UserRoundIcon className="w-5 h-5" />
-                      <span>Profile</span>
-                    </Link>
-                  </li>
-                  <li>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center gap-4 hover:text-error transition-colors cursor-pointer"
-                    >
-                      <LogOutIcon className="w-5 h-5" />
-                      <span>Logout</span>
-                    </button>
-                  </li>
-                </>
+                <li>
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-4 hover:text-error transition-colors cursor-pointer"
+                  >
+                    <LogOutIcon className="w-5 h-5" />
+                    <span>Logout</span>
+                  </button>
+                </li>
               ) : (
                 <>
                   {location.pathname !== "/login" && (

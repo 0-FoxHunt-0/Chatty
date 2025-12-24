@@ -3,8 +3,6 @@ import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Settings from "./pages/Settings";
-import Profile from "./pages/Profile";
 import PageNotFound from "./pages/PageNotFound";
 import { useEffect } from "react";
 import { useAuthStore } from "./store/useAuthStore";
@@ -77,11 +75,6 @@ const App = () => {
           <Route
             path="/register"
             element={!user ? <Register /> : <Navigate to="/" />}
-          />
-          <Route path="/settings" element={<Settings />} />
-          <Route
-            path="/profile"
-            element={user ? <Profile /> : <Navigate to="/login" />}
           />
         </Route>
 
