@@ -1,9 +1,11 @@
 import { useChatStore } from "../store/useChatStore";
 import { useEffect, useState, useMemo } from "react";
 import SidebarSkeleton from "./skeletons/SidebarSkeleton";
-import { Users } from "lucide-react";
+import { Users, Settings } from "lucide-react";
 import avatarImage from "../assets/avatar.jpg";
 import { useAuthStore } from "../store/useAuthStore";
+import OnlineStatusIndicator from "./reusables/OnlineStatusIndicator";
+import UserSettingsModal from "./UserSettingsModal";
 
 const Sidebar = () => {
   const { users, areUsersLoading, getUsers, selectedUser, setSelectedUser } =
@@ -12,6 +14,7 @@ const Sidebar = () => {
   const { onlineUsers, user } = useAuthStore();
 
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
+  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
 
   useEffect(() => {
     getUsers();
@@ -50,13 +53,14 @@ const Sidebar = () => {
           </label>
           {/* Online Count Badge - Shows number of online users (excluding current user) */}
           <span className="text-xs text-zinc-500">
-            ({Math.max(0, onlineUsers.filter((id) => id !== user?._id).length)} online)
+            ({Math.max(0, onlineUsers.filter((id) => id !== user?._id).length)}{" "}
+            online)
           </span>
         </div>
       </div>
 
       {/* Scrollable User List Container */}
-      <div className="overflow-y-auto w-full py-3">
+      <div className="overflow-y-auto w-full py-3 flex-1">
         {/* Empty State Message - Shown when no users match the filter */}
         {filteredUsers.length === 0 && (
           <div className="text-center text-zinc-500 py-4">No online users</div>
@@ -77,20 +81,19 @@ const Sidebar = () => {
             `}
           >
             {/* Avatar Container - Profile picture with online status indicator */}
-            <div className="relative mx-auto lg:mx-0">
+            <div className="avatar relative mx-auto lg:mx-0">
               {/* User Profile Picture */}
-              <img
-                src={user.profilePicture || avatarImage}
-                alt={user.fullName}
-                className="size-12 object-cover rounded-full"
-              />
-              {/* Online Status Indicator - Green dot shown when user is online */}
-              {onlineUsers.includes(user._id) && (
-                <span
-                  className="absolute bottom-0 right-0 size-3 bg-green-500 
-                  rounded-full ring-2 ring-zinc-900"
+              <div className="size-12 rounded-full">
+                <img
+                  src={user.profilePicture || avatarImage}
+                  alt={user.fullName}
+                  className="object-cover rounded-full"
                 />
-              )}
+              </div>
+              {/* Online Status Indicator */}
+              <OnlineStatusIndicator
+                isOnline={onlineUsers.includes(user._id)}
+              />
             </div>
 
             {/* User Info Section - Name and status text (only visible on larger screens) */}
@@ -105,6 +108,76 @@ const Sidebar = () => {
           </button>
         ))}
       </div>
+
+      {/* User Dock at Bottom */}
+      {user && (
+        <div className="w-full border-t border-base-300 p-3 bg-base-100 shrink-0">
+          <div className="flex items-center justify-between gap-3">
+            {/* Left Side - User Info */}
+            <div className="flex items-center gap-3 flex-1 min-w-0">
+              {/* Avatar opens settings modal (tooltip should exist at all widths) */}
+              <div
+                className="tooltip tooltip-right lg:tooltip-top"
+                data-tip="User settings"
+              >
+                <div
+                  className="avatar relative shrink-0 cursor-pointer"
+                  onClick={() => setIsSettingsModalOpen(true)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      setIsSettingsModalOpen(true);
+                    }
+                  }}
+                  aria-label="User settings"
+                >
+                  <div className="size-10 rounded-full">
+                    <img
+                      src={user.profilePicture || avatarImage}
+                      alt={user.fullName}
+                      className="object-cover rounded-full"
+                    />
+                  </div>
+                  <OnlineStatusIndicator
+                    isOnline={onlineUsers.includes(user._id)}
+                    showOffline={true}
+                  />
+                </div>
+              </div>
+              {/* User name and status - hidden on small screens */}
+              <div className="hidden lg:block min-w-0 flex-1">
+                <div className="font-medium truncate text-sm">
+                  {user.fullName}
+                </div>
+                <div className="text-xs text-zinc-400">
+                  {onlineUsers.includes(user._id) ? "Online" : "Offline"}
+                </div>
+              </div>
+            </div>
+
+            {/* Settings icon should NOT be always hidden (show on large screens) */}
+            <div
+              className="tooltip tooltip-top hidden lg:block"
+              data-tip="User settings"
+            >
+              <button
+                onClick={() => setIsSettingsModalOpen(true)}
+                className="btn btn-ghost btn-sm btn-circle shrink-0 group"
+                aria-label="User settings"
+              >
+                <Settings className="w-5 h-5 transition-transform duration-300 group-hover:rotate-360" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      <UserSettingsModal
+        isOpen={isSettingsModalOpen}
+        onClose={() => setIsSettingsModalOpen(false)}
+      />
     </aside>
   );
 };
