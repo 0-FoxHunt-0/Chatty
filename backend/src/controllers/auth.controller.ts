@@ -5,6 +5,45 @@ import bcrypt from "bcryptjs";
 import generateToken from "../lib/utils";
 import cloudinary from "../lib/cloudinary";
 
+// Helper function to get frontend URL from request or environment
+const getFrontendUrl = (req: Request): string => {
+  const isDevelopment =
+    process.env.NODE_ENV !== "production" || !process.env.NODE_ENV;
+
+  // In development, always use localhost:5173
+  if (isDevelopment) {
+    return "http://localhost:5173";
+  }
+
+  // In production, try multiple sources:
+  // 1. Use FRONTEND_URL env variable if set
+  if (process.env.FRONTEND_URL) {
+    return process.env.FRONTEND_URL.replace(/\/$/, "");
+  }
+
+  // 2. Use request origin (works when frontend and backend are on same domain)
+  const origin = req.headers.origin;
+  if (origin) {
+    return origin.replace(/\/$/, "");
+  }
+
+  // 3. Construct from request protocol and host
+  // Handle proxy headers (common on platforms like Render)
+  const forwardedProto = req.get("x-forwarded-proto");
+  const protocol =
+    forwardedProto || req.protocol || (req.secure ? "https" : "http");
+  const host = req.get("x-forwarded-host") || req.get("host");
+  if (host) {
+    return `${protocol}://${host}`.replace(/\/$/, "");
+  }
+
+  // 4. Fallback (shouldn't happen in production)
+  console.warn(
+    "[getFrontendUrl] Could not determine frontend URL, using default"
+  );
+  return "http://localhost:5173";
+};
+
 export const signup = async (req: Request, res: Response) => {
   console.log("=== SIGNUP REQUEST RECEIVED ===");
   console.log("Request body:", { ...req.body, password: "[REDACTED]" });
@@ -178,22 +217,15 @@ export const googleCallback = async (req: Request, res: Response) => {
     // Passport attaches the linked/created user to req.user
     const user = req.user as (IUser & { _id: string }) | undefined;
 
-    // Determine frontend URL:
-    // - In development, always use the Vite dev server (5173)
-    // - In production, use FRONTEND_URL if set, otherwise default to dev server
-    const isDevelopment =
-      process.env.NODE_ENV !== "production" || !process.env.NODE_ENV;
-    const redirectBase = isDevelopment
-      ? "http://localhost:5173"
-      : process.env.FRONTEND_URL || "http://localhost:5173";
-    const frontendUrl = redirectBase.replace(/\/$/, "");
+    // Get frontend URL from request or environment
+    const frontendUrl = getFrontendUrl(req);
 
     // Get the returnTo path from session (stored before Google redirect)
     const returnTo = req.session.returnTo || "/";
     const redirectUrl = `${frontendUrl}${returnTo}`;
 
     console.log(
-      `[googleCallback] NODE_ENV: ${process.env.NODE_ENV}, isDevelopment: ${isDevelopment}, returnTo: ${returnTo}, redirecting to: ${redirectUrl}`
+      `[googleCallback] NODE_ENV: ${process.env.NODE_ENV}, frontendUrl: ${frontendUrl}, returnTo: ${returnTo}, redirecting to: ${redirectUrl}`
     );
 
     if (!user) {
@@ -211,12 +243,7 @@ export const googleCallback = async (req: Request, res: Response) => {
     return res.redirect(redirectUrl);
   } catch (error) {
     console.log("Error in googleCallback controller", error);
-    const isDevelopment =
-      process.env.NODE_ENV !== "production" || !process.env.NODE_ENV;
-    const redirectBase = isDevelopment
-      ? "http://localhost:5173"
-      : process.env.FRONTEND_URL || "http://localhost:5173";
-    const frontendUrl = redirectBase.replace(/\/$/, "");
+    const frontendUrl = getFrontendUrl(req);
 
     // Try to get returnTo from session even on error
     const returnTo = req.session.returnTo || "/";

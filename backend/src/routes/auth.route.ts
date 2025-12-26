@@ -73,10 +73,15 @@ if (isGoogleOAuthConfigured) {
       failureRedirect: (() => {
         const isDevelopment =
           process.env?.NODE_ENV !== "production" || !process.env?.NODE_ENV;
-        const frontendUrl = isDevelopment
-          ? "http://localhost:5173"
-          : process.env.FRONTEND_URL || "http://localhost:5173";
-        return frontendUrl.replace(/\/$/, "");
+        if (isDevelopment) {
+          return "http://localhost:5173";
+        }
+        // In production, use FRONTEND_URL if set, otherwise we'll handle it in the callback
+        // This is a fallback - the callback will use request origin if FRONTEND_URL is not set
+        return (
+          process.env.FRONTEND_URL?.replace(/\/$/, "") ||
+          "http://localhost:5173"
+        );
       })(),
       session: true,
     }),
@@ -100,10 +105,22 @@ if (isGoogleOAuthConfigured) {
   router.get("/google/callback", (req, res) => {
     const isDevelopment =
       process.env?.NODE_ENV !== "production" || !process.env?.NODE_ENV;
-    const redirectBase = isDevelopment
-      ? "http://localhost:5173"
-      : process.env.FRONTEND_URL || "http://localhost:5173";
-    res.redirect(redirectBase.replace(/\/$/, ""));
+
+    let frontendUrl: string;
+    if (isDevelopment) {
+      frontendUrl = "http://localhost:5173";
+    } else if (process.env.FRONTEND_URL) {
+      frontendUrl = process.env.FRONTEND_URL.replace(/\/$/, "");
+    } else {
+      // Try to construct from request (handle proxy headers)
+      const forwardedProto = req.get("x-forwarded-proto");
+      const protocol =
+        forwardedProto || req.protocol || (req.secure ? "https" : "http");
+      const host = req.get("x-forwarded-host") || req.get("host");
+      frontendUrl = host ? `${protocol}://${host}` : "http://localhost:5173";
+    }
+
+    res.redirect(frontendUrl);
   });
 }
 
