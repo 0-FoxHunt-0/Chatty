@@ -112,7 +112,7 @@ dist
 
 # Gatsby files
 .cache/
-public
+# public  # Removed - was incorrectly excluding frontend/public (Vite static assets)
 
 # Storybook build outputs
 .out
