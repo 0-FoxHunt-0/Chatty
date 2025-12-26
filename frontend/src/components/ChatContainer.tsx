@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useChatStore } from "../store/useChatStore";
 import ChatHeader from "./ChatHeader";
 import MessageInput from "./MessageInput";
-import MessageSkeleton from "./skeletons/MessageSkeleton";
+import MessageSkeleton from "./reusables/MessageSkeleton";
 import TypingIndicator from "./TypingIndicator";
 import UserInfo from "./UserInfo";
 import { useAuthStore } from "../store/useAuthStore";
@@ -64,6 +64,20 @@ const ChatContainer = () => {
       hasScrolledOnLoadRef.current = false;
     }
   }, [selectedUser?._id, getMessages]);
+
+  // Auto-show UserInfo on desktop large screens when user is selected, but not on small screens
+  useEffect(() => {
+    if (!selectedUser) {
+      // Close when no user is selected
+      setUserInfoVisible(false);
+    } else if (isDesktop && isLargeScreen) {
+      // Auto-show on desktop large screens
+      setUserInfoVisible(true);
+    } else {
+      // On small screens/mobile, start closed (user can open manually via swipe/button)
+      setUserInfoVisible(false);
+    }
+  }, [selectedUser, isDesktop, isLargeScreen, setUserInfoVisible]);
 
   // Scroll to bottom when messages are initially loaded
   useEffect(() => {
@@ -168,7 +182,8 @@ const ChatContainer = () => {
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const width = rect.width;
-    const rightEdgeStart = width * 0.98; // 2% from right
+    // Use a larger hover area on small screens (5% from right) vs large screens (2% from right)
+    const rightEdgeStart = isLargeScreen ? width * 0.98 : width * 0.95;
 
     if (!isUserInfoVisible && x >= rightEdgeStart) {
       setIsHoveringRightEdge(true);
@@ -218,9 +233,15 @@ const ChatContainer = () => {
         <button
           onClick={() => setUserInfoVisible(true)}
           className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-base-100 rounded-l-full p-2 shadow-lg border border-base-300 border-r-0 transition-all duration-300 ease-in-out hover:bg-base-200 ${
-            isHoveringRightEdge
+            isLargeScreen
+              ? // On large screens: only show on hover
+                isHoveringRightEdge
+                ? "opacity-100 translate-x-0"
+                : "opacity-0 translate-x-full pointer-events-none"
+              : // On small desktop screens: always visible but semi-transparent, fully visible on hover
+              isHoveringRightEdge
               ? "opacity-100 translate-x-0"
-              : "opacity-0 translate-x-full pointer-events-none"
+              : "opacity-40 translate-x-0"
           }`}
           aria-label="Show user info"
         >

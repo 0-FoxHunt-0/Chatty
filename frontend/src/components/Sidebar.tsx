@@ -1,11 +1,11 @@
 import { useChatStore } from "../store/useChatStore";
 import { useEffect, useState, useMemo } from "react";
-import SidebarSkeleton from "./skeletons/SidebarSkeleton";
+import SidebarSkeleton from "./reusables/SidebarSkeleton";
 import { Users, Settings } from "lucide-react";
 import avatarImage from "../assets/avatar.jpg";
 import { useAuthStore } from "../store/useAuthStore";
 import OnlineStatusIndicator from "./reusables/OnlineStatusIndicator";
-import UserSettingsModal from "./UserSettingsModal";
+import UserSettingsModal from "./user-settings/UserSettingsModal";
 
 const Sidebar = () => {
   const { users, areUsersLoading, getUsers, selectedUser, setSelectedUser } =
@@ -15,10 +15,22 @@ const Sidebar = () => {
 
   const [showOnlineOnly, setShowOnlineOnly] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
     getUsers();
   }, [getUsers]);
+
+  // Detect desktop screen size (lg breakpoint is 1024px)
+  useEffect(() => {
+    const checkDesktop = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+
+    checkDesktop();
+    window.addEventListener("resize", checkDesktop);
+    return () => window.removeEventListener("resize", checkDesktop);
+  }, []);
 
   const filteredUsers = useMemo(() => {
     if (!users) return [];
@@ -115,22 +127,28 @@ const Sidebar = () => {
           <div className="flex items-center justify-between gap-3">
             {/* Left Side - User Info */}
             <div className="flex items-center gap-3 flex-1 min-w-0">
-              {/* Avatar opens settings modal (tooltip should exist at all widths) */}
+              {/* Avatar opens settings modal (tooltip only on small screens where user info is hidden) */}
               <div
-                className="tooltip tooltip-right lg:tooltip-top"
+                className="tooltip tooltip-right lg:[&:before]:hidden lg:[&:after]:hidden"
                 data-tip="User settings"
               >
                 <div
-                  className="avatar relative shrink-0 cursor-pointer"
-                  onClick={() => setIsSettingsModalOpen(true)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      setIsSettingsModalOpen(true);
-                    }
-                  }}
-                  aria-label="User settings"
+                  className="avatar relative shrink-0 cursor-pointer lg:cursor-default"
+                  onClick={
+                    !isDesktop ? () => setIsSettingsModalOpen(true) : undefined
+                  }
+                  role={!isDesktop ? "button" : undefined}
+                  tabIndex={!isDesktop ? 0 : undefined}
+                  onKeyDown={
+                    !isDesktop
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            setIsSettingsModalOpen(true);
+                          }
+                        }
+                      : undefined
+                  }
+                  aria-label={!isDesktop ? "User settings" : undefined}
                 >
                   <div className="size-10 rounded-full">
                     <img
