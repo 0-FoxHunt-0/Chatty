@@ -11,7 +11,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { showToast } from "../lib/toast";
 import { useAuthStore } from "../store/useAuthStore";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import AuthImagePattern from "../components/AuthImagePattern";
 import { generateAndUploadAvatar } from "../lib/avatar";
 import { axiosInstance } from "../lib/axios";
@@ -24,6 +24,7 @@ interface FormData {
 
 const Register = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { signup, isLoading, user, error, updateProfile } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
@@ -276,7 +277,11 @@ const Register = () => {
                   ? "Continue with Google"
                   : "Google sign-in is not configured on the server"
               }
-              onClick={() => window.location.assign("/api/auth/google")}
+              onClick={() => {
+                // Get the returnTo path - if on /register, use base route, otherwise use current path
+                const returnTo = location.pathname === "/register" ? "/" : location.pathname;
+                window.location.assign(`/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`);
+              }}
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
                 <path

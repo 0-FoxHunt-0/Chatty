@@ -11,7 +11,7 @@ import {
   EyeIcon,
   EyeOffIcon,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import AuthImagePattern from "../components/AuthImagePattern";
 
 interface FormData {
@@ -21,6 +21,7 @@ interface FormData {
 
 const Login = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, isLoading, user, error } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
   const [googleEnabled, setGoogleEnabled] = useState(false);
@@ -220,7 +221,11 @@ const Login = () => {
                   ? "Continue with Google"
                   : "Google sign-in is not configured on the server"
               }
-              onClick={() => window.location.assign("/api/auth/google")}
+              onClick={() => {
+                // Get the returnTo path - if on /login, use base route, otherwise use current path
+                const returnTo = location.pathname === "/login" ? "/" : location.pathname;
+                window.location.assign(`/api/auth/google?returnTo=${encodeURIComponent(returnTo)}`);
+              }}
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" aria-hidden="true">
                 <path
