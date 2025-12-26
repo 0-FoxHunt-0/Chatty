@@ -9,6 +9,8 @@ import cors from "cors";
 import { initializeSocket } from "./lib/socket";
 import path from "path";
 import fs from "fs";
+import session from "express-session";
+import passport from "./lib/passport";
 
 dotenv.config();
 
@@ -45,6 +47,26 @@ if (frontendUrl || !isProduction) {
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser());
+
+// Passport uses session for OAuth state/callback validation.
+// This session is not used for app auth (JWT cookie is), only for the OAuth handshake.
+app.use(
+  session({
+    secret:
+      process.env.SESSION_SECRET || process.env.JWT_SECRET || "dev_secret",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      // Strict can break OAuth redirects; Lax is the typical choice
+      sameSite: "lax",
+      maxAge: 1000 * 60 * 10, // 10 minutes
+    },
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
 
 // Add request logging middleware
 app.use((req, res, next) => {

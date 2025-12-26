@@ -108,6 +108,15 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
+    // If user was created via Google OAuth and has no password, prevent password login
+    if (!user.password) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "This account uses Google sign-in. Please continue with Google.",
+      });
+    }
+
     //* Check if password is correct
     const isPasswordCorrect = await bcrypt.compare(password, user.password);
 
@@ -161,6 +170,46 @@ export const logout = (req: Request, res: Response) => {
       success: false,
       message: "Internal server error",
     });
+  }
+};
+
+export const googleCallback = async (req: Request, res: Response) => {
+  try {
+    // Passport attaches the linked/created user to req.user
+    const user = req.user as (IUser & { _id: string }) | undefined;
+
+    // Determine frontend URL:
+    // - In development, always use the Vite dev server (5173)
+    // - In production, use FRONTEND_URL if set, otherwise default to dev server
+    const isDevelopment =
+      process.env.NODE_ENV !== "production" || !process.env.NODE_ENV;
+    const redirectBase = isDevelopment
+      ? "http://localhost:5173"
+      : process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendUrl = redirectBase.replace(/\/$/, "");
+
+    console.log(
+      `[googleCallback] NODE_ENV: ${process.env.NODE_ENV}, isDevelopment: ${isDevelopment}, redirecting to: ${frontendUrl}`
+    );
+
+    if (!user) {
+      return res.redirect(`${frontendUrl}/login?error=google_auth_failed`);
+    }
+
+    generateToken(user._id.toString(), res);
+
+    // Redirect to frontend root (React Router will handle routing)
+    return res.redirect(frontendUrl);
+  } catch (error) {
+    console.log("Error in googleCallback controller", error);
+    const isDevelopment =
+      process.env.NODE_ENV !== "production" || !process.env.NODE_ENV;
+    const redirectBase = isDevelopment
+      ? "http://localhost:5173"
+      : process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendUrl = redirectBase.replace(/\/$/, "");
+    console.log(`[googleCallback error] redirecting to: ${frontendUrl}`);
+    return res.redirect(`${frontendUrl}/login?error=google_auth_failed`);
   }
 };
 
