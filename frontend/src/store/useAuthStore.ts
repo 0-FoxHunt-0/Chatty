@@ -110,36 +110,45 @@ export const useAuthStore = create<IAuthStore>((set) => ({
     // Set loading state to prevent premature route rendering
     set({ isLoading: true, isInitialized: false });
 
-    // Check for cached user data first
     const cached = getCachedUser();
 
+    // Fast path: hydrate from cache immediately, then verify in background.
     if (cached) {
-      // Auto-login with cached data immediately
       set({ user: cached.user, isLoading: false, isInitialized: true });
 
-      // Verify with server in background (silently)
       try {
         const response = await axiosInstance.get("/auth/check-auth");
         const userData = response.data.user;
-
-        // Update cache with fresh data
         setCachedUser(userData);
-
-        // Update user state with fresh data
         set({ user: userData });
       } catch (error) {
         const axiosError = error as AxiosError;
-
         if (axiosError?.response?.status === 401) {
-          // Token invalid, clear cache and state
           clearCachedUser();
           set({ user: null });
         }
-        // Silently handle other errors - keep cached data
+        // silently ignore other errors to keep cached data
       }
-    } else {
-      // No cache, user is not authenticated
-      set({ user: null, isLoading: false, isInitialized: true });
+
+      return;
+    }
+
+    // No cache: do a single server check so cookie-based OAuth logins are detected.
+    try {
+      const response = await axiosInstance.get("/auth/check-auth");
+      const userData = response.data.user;
+      setCachedUser(userData);
+      set({ user: userData, isLoading: false, isInitialized: true, error: null });
+    } catch (error) {
+      const axiosError = error as AxiosError;
+
+      if (axiosError?.response?.status === 401) {
+        clearCachedUser();
+        set({ user: null, isLoading: false, isInitialized: true, error: null });
+      } else {
+        // Network/server error - treat as not authenticated, but don't spam a toast here
+        set({ user: null, isLoading: false, isInitialized: true, error: null });
+      }
     }
   },
   checkAuth: async () => {

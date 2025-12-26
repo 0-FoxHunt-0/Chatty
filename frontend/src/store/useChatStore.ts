@@ -284,8 +284,9 @@ export const useChatStore = create<IChatStore>((set, get) => ({
           : user,
       // Reset typing state when user changes
       isTyping: false,
-      // Set UserInfo visibility: true when user is selected, false when deselected
-      isUserInfoVisible: user !== null,
+      // Set UserInfo visibility: false when deselected, but don't auto-show on small screens
+      // Visibility will be controlled by components based on screen size
+      isUserInfoVisible: user === null ? false : state.isUserInfoVisible,
     })),
   isUserInfoVisible: false,
   setUserInfoVisible: (visible: boolean) => set({ isUserInfoVisible: visible }),
