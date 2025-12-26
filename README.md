@@ -72,10 +72,17 @@ PORT=5001
 NODE_ENV=development
 MONGODB_URI=your_mongodb_connection_string
 JWT_SECRET=your_jwt_secret_key
+SESSION_SECRET=your_session_secret_key
 CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 FRONTEND_URL=http://localhost:5173
+
+# Optional: Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+# Google requires an absolute redirect URI
+GOOGLE_CALLBACK_URL=http://localhost:5001/api/auth/google/callback
 ```
 
 ### 3. Frontend Setup
@@ -144,10 +151,13 @@ Chatty/
 ## 🔌 API Endpoints
 
 ### Authentication
-- `POST /api/auth/register` - Register a new user
+- `POST /api/auth/signup` - Register a new user
 - `POST /api/auth/login` - Login user
 - `POST /api/auth/logout` - Logout user
-- `GET /api/auth/me` - Get current user
+- `GET /api/auth/check-auth` - Get current user (requires auth)
+- `GET /api/auth/oauth/status` - OAuth provider availability (e.g. Google enabled/disabled)
+- `GET /api/auth/google` - Start Google OAuth (only when configured)
+- `GET /api/auth/google/callback` - Google OAuth callback
 
 ### Messages
 - `GET /api/messages/:userId` - Get messages with a user
@@ -166,10 +176,14 @@ Chatty/
 | `NODE_ENV` | Environment (development/production) |
 | `MONGODB_URI` | MongoDB connection string |
 | `JWT_SECRET` | Secret key for JWT tokens |
+| `SESSION_SECRET` | Secret key for OAuth session (used only for the Google OAuth handshake) |
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
 | `FRONTEND_URL` | Frontend URL for CORS (optional) |
+| `GOOGLE_CLIENT_ID` | Google OAuth client id (optional) |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret (optional) |
+| `GOOGLE_CALLBACK_URL` | Full Google OAuth callback URL (optional, recommended) |
 
 ## 📝 Available Scripts
 
