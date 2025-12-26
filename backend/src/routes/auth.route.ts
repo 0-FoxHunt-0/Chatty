@@ -46,6 +46,21 @@ const isGoogleOAuthConfigured =
 if (isGoogleOAuthConfigured) {
   router.get(
     "/google",
+    (req, res, next) => {
+      // Store the returnTo path in session before redirecting to Google
+      const returnTo = req.query.returnTo as string | undefined;
+      if (returnTo) {
+        // Ensure it's a valid path (starts with / and doesn't contain protocol)
+        const sanitized = returnTo.startsWith("/") ? returnTo : `/${returnTo}`;
+        // Remove /login and /register, default to base route
+        req.session.returnTo =
+          sanitized === "/login" || sanitized === "/register" ? "/" : sanitized;
+      } else {
+        // Default to base route if no returnTo specified
+        req.session.returnTo = "/";
+      }
+      next();
+    },
     passport.authenticate("google", {
       scope: ["profile", "email"],
       session: true,
@@ -61,10 +76,7 @@ if (isGoogleOAuthConfigured) {
         const frontendUrl = isDevelopment
           ? "http://localhost:5173"
           : process.env.FRONTEND_URL || "http://localhost:5173";
-        return `${frontendUrl.replace(
-          /\/$/,
-          ""
-        )}/login?error=google_auth_failed`;
+        return frontendUrl.replace(/\/$/, "");
       })(),
       session: true,
     }),
@@ -91,12 +103,7 @@ if (isGoogleOAuthConfigured) {
     const redirectBase = isDevelopment
       ? "http://localhost:5173"
       : process.env.FRONTEND_URL || "http://localhost:5173";
-    res.redirect(
-      `${redirectBase.replace(
-        /\/$/,
-        ""
-      )}/login?error=google_oauth_not_configured`
-    );
+    res.redirect(redirectBase.replace(/\/$/, ""));
   });
 }
 

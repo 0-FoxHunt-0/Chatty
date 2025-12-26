@@ -188,18 +188,27 @@ export const googleCallback = async (req: Request, res: Response) => {
       : process.env.FRONTEND_URL || "http://localhost:5173";
     const frontendUrl = redirectBase.replace(/\/$/, "");
 
+    // Get the returnTo path from session (stored before Google redirect)
+    const returnTo = req.session.returnTo || "/";
+    const redirectUrl = `${frontendUrl}${returnTo}`;
+
     console.log(
-      `[googleCallback] NODE_ENV: ${process.env.NODE_ENV}, isDevelopment: ${isDevelopment}, redirecting to: ${frontendUrl}`
+      `[googleCallback] NODE_ENV: ${process.env.NODE_ENV}, isDevelopment: ${isDevelopment}, returnTo: ${returnTo}, redirecting to: ${redirectUrl}`
     );
 
     if (!user) {
-      return res.redirect(`${frontendUrl}/login?error=google_auth_failed`);
+      return res.redirect(redirectUrl);
     }
 
     generateToken(user._id.toString(), res);
 
-    // Redirect to frontend root (React Router will handle routing)
-    return res.redirect(frontendUrl);
+    // Clear the returnTo from session after using it
+    if (req.session.returnTo) {
+      delete req.session.returnTo;
+    }
+
+    // Redirect to the stored returnTo path (or base route)
+    return res.redirect(redirectUrl);
   } catch (error) {
     console.log("Error in googleCallback controller", error);
     const isDevelopment =
@@ -208,8 +217,13 @@ export const googleCallback = async (req: Request, res: Response) => {
       ? "http://localhost:5173"
       : process.env.FRONTEND_URL || "http://localhost:5173";
     const frontendUrl = redirectBase.replace(/\/$/, "");
-    console.log(`[googleCallback error] redirecting to: ${frontendUrl}`);
-    return res.redirect(`${frontendUrl}/login?error=google_auth_failed`);
+
+    // Try to get returnTo from session even on error
+    const returnTo = req.session.returnTo || "/";
+    const redirectUrl = `${frontendUrl}${returnTo}`;
+
+    console.log(`[googleCallback error] redirecting to: ${redirectUrl}`);
+    return res.redirect(redirectUrl);
   }
 };
 
